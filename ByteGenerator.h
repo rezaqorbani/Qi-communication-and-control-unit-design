@@ -1,3 +1,7 @@
+/*
+Created by Reza Qorbani
+*/
+
 #ifndef BYTEGENERATOR_H
 #define BYTEGENERATOR_H
 
