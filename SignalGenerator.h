@@ -1,6 +1,9 @@
 #ifndef SIGNALGENERATOR_H
 #define SIGNALGENERATOR_H
 
+/*
+Made by Reza Qorbani
+*/
 #include "ByteGenerator.h"
 
 

@@ -65,6 +65,8 @@ char* SignalGenerator::getSignal()
 }
 
 
+
+
 int SignalGenerator::getSignalSize()
 {
     int signal_size = 0;
