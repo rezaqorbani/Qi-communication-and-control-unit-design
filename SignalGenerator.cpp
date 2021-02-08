@@ -10,23 +10,23 @@ SignalGenerator::SignalGenerator(int header)
 }
 
 
-void SignalGenerator::set_message_index(int index, ByteGenerator message)
+void SignalGenerator::setMessageIndex(int index, ByteGenerator message)
 {
     this->m_messages[index] = message;
     this->m_generate_checksum();
 }
 
 
-char* SignalGenerator::get_message_byte(int index)
+char* SignalGenerator::getMessageByte(int index)
 {
     return m_messages[index].get_byte();
 }
 
 
-char* SignalGenerator::get_signal()
+char* SignalGenerator::getSignal()
 {
 
-    char output [this->get_signal_size()];
+    char output [this->getSignalSize()];
     this->m_signal = output;
 
     int byte_index = 0;
@@ -65,7 +65,7 @@ char* SignalGenerator::get_signal()
 }
 
 
-int SignalGenerator::get_signal_size()
+int SignalGenerator::getSignalSize()
 {
     int signal_size = 0;
 
