@@ -21,7 +21,6 @@ namespace qiDelays
 bool sendSignal(SignalGenerator signal) 
 {
   bool current_state;
-  const int ModComPin  =  1;//Ändra siffran beroende på vilken pin som faktiskt används
   if (digitalRead(ModComPin)==HIGH){
     current_state = true;
   }
@@ -75,8 +74,6 @@ bool sendSignal(SignalGenerator signal)
 
 void check_powsignal_switches(IDK currentPowerLevelState) // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
 { 
-  const int powerSignalPin  =  A0;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, analog)
-  const int onOffSwitchPin  =  2;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, digital)
   // checks if the Primary Cell current amplitude crosses 50% of the stable level
   //A method that should be called repeteadly, to ensure that we do not miss a signalchange. FIX IDK idk vad det ska ha för type
   //the value below can be changed, idk what is right
@@ -146,7 +143,10 @@ void startSystem()
 void setup()
 {
   // put your setup code here, to run once:
-   pinMode(1, OUTPUT);//Number here to correspond to the ModComPin
+  // Här definierar vi alla pins som ska användas
+  const int ModComPin = pinMode(1, OUTPUT);//Number here to correspond to the ModComPin
+  const int powerSignalPin  =  A0;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, analog)
+  const int onOffSwitchPin  =  2;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, digital)
   //This is how you implement a signal
   //-----------------------------------------------------------
   SignalGenerator sig(0x1f);    //Give the signal header in hex
