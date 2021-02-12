@@ -11,6 +11,10 @@ namespace qiDelays
   int t_silent = 7; 
 };
 
+namespace pins
+{
+  const int ModComPin; 
+};
 
 
 // Sends a given signal
@@ -24,7 +28,7 @@ namespace qiDelays
 bool sendSignal(SignalGenerator signal) 
 {
   bool current_state;
-  if (digitalRead(ModComPin)==HIGH){
+  if (digitalRead(pins::ModComPin)==HIGH){
     current_state = true;
   }
   else{
