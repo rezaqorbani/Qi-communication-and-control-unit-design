@@ -35,39 +35,39 @@ bool sendSignal(SignalGenerator signal)
     current_state = false;
   }
   
-  for (int i = 0; i < signal.get_signal_size(); i++)
+  for (int i = 0; i < signal.getSignalSize(); i++)
   {
-    if( signal.get_signal()[i] == '1')
+    if( signal.getSignal()[i] == '1')
     {
       if(current_state){
         //observera att syntax för arduinoswitches är fel
-        digitalWrite(ModComPin, LOW);
+        digitalWrite(pins::ModComPin, LOW);
         delay(0.25);
-        digitalWrite(ModComPin, HIGH);
+        digitalWrite(pins::ModComPin, HIGH);
         delay(0.25);
         //Switch twice, from HIGH->LOW->HIGH
         current_state=true;
       }
       else{
-        digitalWrite(ModComPin, HIGH);
+        digitalWrite(pins::ModComPin, HIGH);
         delay(0.25);
-        digitalWrite(ModComPin, LOW);
+        digitalWrite(pins::ModComPin, LOW);
         delay(0.25);
         //Switch twice, from LOW->HIGH->LOW
         current_state=false;
         }
       }
-    else if(signal.get_signal()[i] == '0')
+    else if(signal.getSignal()[i] == '0')
     {
       if(current_state){
         //observera att syntax för arduinoswitches är fel
-        digitalWrite(ModComPin, LOW);
+        digitalWrite(pins::ModComPin, LOW);
         delay(0.5);
         //Switch once, from HIGH->LOW
         current_state=false;
       }
       else{
-        digitalWrite(ModComPin, HIGH);
+        digitalWrite(pins::ModComPin, HIGH);
         delay(0.5);
         //Switch once, from LOW->HIGH
         current_state=true;
@@ -79,7 +79,7 @@ bool sendSignal(SignalGenerator signal)
 }
 
 
-void check_powsignal_switches(IDK currentPowerLevelState) // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
+bool check_powsignal_switches(IDK currentPowerLevelState) // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
 { 
   // checks if the Primary Cell current amplitude crosses 50% of the stable level
   //A method that should be called repeteadly, to ensure that we do not miss a signalchange. FIX IDK idk vad det ska ha för type
@@ -107,10 +107,10 @@ void check_powsignal_switches(IDK currentPowerLevelState) // vet inte riktigt hu
 //conver int to binary
 char* intToBinary(int n)
 {
-  char* ret [8];
+  char ret [8];
   int index = 0; 
-  while(n!=0) {ret[index]=(n%2==0 ?"0":"1"); index++; n/=2;}
-  return r;
+  while(n!=0) {ret[index] = (n%2==0 ?'0':'1'); index++; n/=2;}
+  return ret;
 }
 
 
@@ -132,7 +132,7 @@ void pingPhase()
   char signalStrengthValueBinary[8] = T)B/vet inte hur det binära talet ska hamna när men ja
   SignalGenerator signalStrengthPacket(0x01);
   signalStrengthPacket.set_message_index(0, ByteGenerator(signalStrengthValueBinary[0],signalStrengthValueBinary[1],signalStrengthValueBinary[2],signalStrengthValueBinary[3],signalStrengthValueBinary[4],signalStrengthValueBinary[5],signalStrengthValueBinary[6],signalStrengthValueBinary[7]));
-  send_signal(signalStrengthPacket);
+  sendSignal(signalStrengthPacket);
 }
 
 bool sendOneWatt()
@@ -142,27 +142,23 @@ bool sendOneWatt()
   //else send 0.5 watt
 }
 // starts the components in the 
-void startSystem()
-{
-}
+
 
 
 void setup()
 {
   // put your setup code here, to run once:
   // Här definierar vi alla pins som ska användas
-  const int ModComPin = pinMode(1, OUTPUT);//Number here to correspond to the ModComPin
-  const int powerSignalPin  =  A0;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, analog)
-  const int onOffSwitchPin  =  2;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, digital)
-  //This is how you implement a signal
-  //-----------------------------------------------------------
-  SignalGenerator sig(0x1f);    //Give the signal header in hex
-  sig.set_preamble();           //set the preamble (maybe uneccessary)
-  sig.set_message_index(1, ByteGenerator('1','1','1',1,1,0,0)); // set messeage(s) according to the Qi-spec. 
-  //-----------------------------------------------------------
+  //const int ModComPin = pinMode(1, OUTPUT);//Number here to correspond to the ModComPin
+  //const int powerSignalPin  =  A0;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, analog)
+  //const int onOffSwitchPin  =  2;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, digital)
 
-  //To get the array of the bits of all bytes of a given signal you just defined, use: 
-  char* sig_array = sig.get_signal();
+  //--------------------Signals--------------------
+  SignalGenerator controlErrorPacket(0x03); 
+  SignalGenerator receivedPowerPacket(0x04);
+  SignalGenerator endPowerTransfer(0x02); 
+
+
 }
 
 
@@ -187,7 +183,7 @@ void loop()
       char signalStrengthValueBinary[8] = T)B/vet inte hur det binära talet ska hamna när men ja
       SignalGenerator signalStrengthPacket(0x01);
       signalStrengthPacket.set_message_index(0, ByteGenerator(signalStrengthValueBinary[0],signalStrengthValueBinary[1],signalStrengthValueBinary[2],signalStrengthValueBinary[3],signalStrengthValueBinary[4],signalStrengthValueBinary[5],signalStrengthValueBinary[6],signalStrengthValueBinary[7]));
-      send_signal(signalStrengthPacket); 
+      sendSignal(signalStrengthPacket); 
 
 
       //BEGIN ID & Config phase 
@@ -203,15 +199,15 @@ void loop()
         IdentificationPacket.set_message_index(6)
         
 
-        send_signal(IdentificationPacket)
+        sendSignal(IdentificationPacket)
         delay(qiDelays::t_silent);
         //Kanske följande
         SignalGenerator PowerControlHoldoffPacket(0x06);
-        send_signal(PowerControlHoldoffPacket); // Om vi vill ha en delay på reaktion från sändaren när vi ber om en ändrad spänning
+        sendSignal(PowerControlHoldoffPacket); // Om vi vill ha en delay på reaktion från sändaren när vi ber om en ändrad spänning
         delay(qiDelays::t_silent);
         //Garanterat följande
         SignalGenerator ConfigurationPacket(0x51);
-        send_signal(ConfigurationPacket);
+        sendSignal(ConfigurationPacket);
         delay(qiDelays::t_silent);
 
       }
@@ -235,13 +231,13 @@ void loop()
           {
             //if want to recieve one watt
             //Change the value of the message
-            send_signal(control_error_packet);  
+            sendSignal(controlErrorPacket);  
           }
           else if (!current_power)
           {
             //if want to recieve half watt
             //Change the value of the message
-            send_signal(control_error_packet);  
+            sendSignal(controlErrorPacket);  
 
           }
           bool after_power =  send_one_watt(); 
@@ -256,7 +252,7 @@ void loop()
       
       while(check_powsignal_switches()) //makes sure the transmitter has received the EndPowerTransfer
       {
-        send_signal(EndPowerTransfer); 
+        sendSignal(EndPowerTransfer); 
       }
     
     }
