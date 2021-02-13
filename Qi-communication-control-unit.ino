@@ -13,7 +13,9 @@ namespace qiDelays
 
 namespace pins
 {
-  const int ModComPin; 
+  const int ModComPin = 1;
+  const int powerSignalPin  =  A0;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, analog)
+  const int onOffSwitchPin  =  2;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, digital)
 };
 
 
@@ -152,8 +154,7 @@ void setup()
   // put your setup code here, to run once:
   // Här definierar vi alla pins som ska användas
   const int ModComPin = pinMode(1, OUTPUT);//Number here to correspond to the ModComPin
-  const int powerSignalPin  =  A0;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, analog)
-  const int onOffSwitchPin  =  2;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, digital)
+  
   //This is how you implement a signal
   //-----------------------------------------------------------
   SignalGenerator sig(0x1f);    //Give the signal header in hex
