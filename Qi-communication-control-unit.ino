@@ -17,7 +17,6 @@ namespace pins
   const int powerSignalPin  =  A0;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, analog)
   const int onOffSwitchPin  =  2;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, digital)
   const int powerSignalPin; 
-  const int onOffSwitchPin; 
   const int powerLevelSwitch; 
   const int rectifiedVoltagePin; 
 };
@@ -185,12 +184,17 @@ void loop()
   if (check_powsignal_switches())
   {
     //BEGIN ping phase
-    delay(qiDelays::t_wake); 
-    int maxValue; //Set correct value idk what, same type as what analogRead returns 
-    int signalStrengthValue = (analogRead(pins::rectifiedVoltagePin)/maxValue*256);
-    char* signalStrengthValueBinary = intToBinary(signalStrengthValue);
-    signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary));
-    sendSignal(signalStrengthPacket); 
+    delay(qiDelays::t_wake);
+    if(digitalRead(pins::onOffSwitchPin)==HIGH){
+      int maxValue; //Set correct value idk what, same type as what analogRead returns 
+      int signalStrengthValue = (analogRead(pins::rectifiedVoltagePin)/maxValue*256);
+      char* signalStrengthValueBinary = intToBinary(signalStrengthValue);
+      signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary));
+      sendSignal(signalStrengthPacket); 
+    }
+    else{
+      sendSignal(endPowerTransfer);
+    }
 
 
     //BEGIN ID & Config phase 
