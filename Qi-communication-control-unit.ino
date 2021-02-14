@@ -192,13 +192,15 @@ void loop()
       if(check_powsignal_switches())
       {
         SignalGenerator IdentificationPacket(0x71);//Not completed
-        IdentificationPacket.set_message_index(0,ByteGenerator('0','0','0','0','0','0','0','1'))
-        IdentificationPacket.set_message_index(1)
-        IdentificationPacket.set_message_index(2)
-        IdentificationPacket.set_message_index(3)
-        IdentificationPacket.set_message_index(4)
-        IdentificationPacket.set_message_index(5)
-        IdentificationPacket.set_message_index(6)
+        IdentificationPacket.set_message_index(0, ByteGenerator('0','0','0','1','0','0','1','0'))//Major/Minor version
+        IdentificationPacket.set_message_index(1, ByteGenerator('0','0','0','0','0','0','0','0'))//Påhittad manufacturer code del1
+        IdentificationPacket.set_message_index(2, ByteGenerator('0','0','0','0','0','0','0','1'))
+        //dessa nedan kan behöva ändras, beror på om vi behöver randomiza grejer
+        IdentificationPacket.set_message_index(3, ByteGenerator('1','0','0','0','0','0','0','0'))
+        IdentificationPacket.set_message_index(4, ByteGenerator('0','0','0','0','0','0','0','0'))
+        IdentificationPacket.set_message_index(5, ByteGenerator('0','0','0','0','0','0','0','0'))
+        IdentificationPacket.set_message_index(6, ByteGenerator('0','0','0','0','1','1','1','1'))
+    
         
 
         sendSignal(IdentificationPacket)
