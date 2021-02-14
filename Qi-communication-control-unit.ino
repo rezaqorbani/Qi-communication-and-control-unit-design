@@ -186,13 +186,10 @@ void loop()
   {
     //BEGIN ping phase
     delay(qiDelays::t_wake); 
-    
-    
     int maxValue; //Set correct value idk what, same type as what analogRead returns 
     int signalStrengthValue = (analogRead(pins::rectifiedVoltagePin)/maxValue*256);
     char* signalStrengthValueBinary = intToBinary(signalStrengthValue);
-    SignalGenerator signalStrengthPacket(0x01);
-    signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary[0],signalStrengthValueBinary[1],signalStrengthValueBinary[2],signalStrengthValueBinary[3],signalStrengthValueBinary[4],signalStrengthValueBinary[5],signalStrengthValueBinary[6],signalStrengthValueBinary[7]));
+    signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary));
     sendSignal(signalStrengthPacket); 
 
 
