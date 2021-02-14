@@ -164,7 +164,10 @@ void setup()
   //const int onOffSwitchPin  =  2;//Ändra siffran beroende på vilken pin som faktiskt används (detta är en avläsningspin, digital)
 
   //--------------------Signals--------------------
+  SignalGenerator signalStrengthPacket(0x01);
   SignalGenerator IdentificationPacket(0x71);
+  SignalGenerator ConfigurationPacket(0x51);
+  SignalGenerator PowerControlHoldoffPacket(0x06);
   SignalGenerator controlErrorPacket(0x03); 
   SignalGenerator receivedPowerPacket(0x04);
   SignalGenerator endPowerTransfer(0x02); 
@@ -205,17 +208,23 @@ void loop()
       IdentificationPacket.set_message_index(4, ByteGenerator('0','0','0','0','0','0','0','0'))
       IdentificationPacket.set_message_index(5, ByteGenerator('0','0','0','0','0','0','0','0'))
       IdentificationPacket.set_message_index(6, ByteGenerator('0','0','0','0','1','1','1','1'))
-  
-      
-
       sendSignal(IdentificationPacket)
       delay(qiDelays::t_silent);
+      
       //Kanske följande
-      SignalGenerator PowerControlHoldoffPacket(0x06);
-      sendSignal(PowerControlHoldoffPacket); // Om vi vill ha en delay på reaktion från sändaren när vi ber om en ändrad spänning
-      delay(qiDelays::t_silent);
+      //SignalGenerator PowerControlHoldoffPacket(0x06);
+      //sendSignal(PowerControlHoldoffPacket); // Om vi vill ha en delay på reaktion från sändaren när vi ber om en ändrad spänning
+      //delay(qiDelays::t_silent);
       //Garanterat följande
-      SignalGenerator ConfigurationPacket(0x51);
+      char* config_array;//osäker hur man initializar arrays 
+      config_array[7] = 0;
+      config_array[6] = 0;
+      // 5-0 ska vara maximum power value
+      ConfigurationPacket.set_message_index(0, ByteGenerator(config_array))
+      ConfigurationPacket.set_message_index(1, ByteGenerator('0','0','0','0','0','0','0','0'))//Reserved
+      ConfigurationPacket.set_message_index(2, ByteGenerator('0','0','0','0','0','0','0','0'))
+      ConfigurationPacket.set_message_index(3, ByteGenerator('0','0','0','0','0','0','0','0'))//Skall ändras
+      ConfigurationPacket.set_message_index(4, ByteGenerator('0','0','0','0','0','0','0','0'))
       sendSignal(ConfigurationPacket);
       delay(qiDelays::t_silent);
 
