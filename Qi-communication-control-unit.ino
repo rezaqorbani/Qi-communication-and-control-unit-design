@@ -121,28 +121,6 @@ char* intToBinary(int n)
 }
 
 
-void pingPhase()
-{
-  // Här ska det egentligen in en ifsats
-  /*
-  if(everything is okay)
-    send signalStrength
-    check_powsignal_switches()
-    procceed to Identification and Configuration 
-  else(if we don't want power (fully charged/unknown))
-    send EndPowerTransfer WITH reason
-  */
-  
-  int maxValue; //Set correct value idk what, same type as what analogRead returns 
-  int signalStrengthValue = (analogRead(pins::rectifiedVoltagePin)/maxValue*256);
-
-
-  char* signalStrengthValueBinary = intToBinary(signalStrengthValue);  //vet inte hur det binära talet ska hamna när men ja
-  SignalGenerator signalStrengthPacket(0x01);
-  signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary[0],signalStrengthValueBinary[1],signalStrengthValueBinary[2],signalStrengthValueBinary[3],signalStrengthValueBinary[4],signalStrengthValueBinary[5],signalStrengthValueBinary[6],signalStrengthValueBinary[7]));
-  sendSignal(signalStrengthPacket);
-}
-
 bool sendOneWatt()
 {
   //checks the button on arduino that chooses between 1 and 0.5 watt power transfer. 
