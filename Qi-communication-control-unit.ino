@@ -184,12 +184,12 @@ void loop()
     //BEGIN ping phase
     delay(qiDelays::t_wake); 
     
-    int signalStrengthValue;
+    
     int maxValue; //Set correct value idk what, same type as what analogRead returns 
-    signalStrengthValue = (analogRead(rectifiedVoltagePin)/maxValue*256);
-    char signalStrengthValueBinary[8] = T)B/vet inte hur det binära talet ska hamna när men ja
+    int signalStrengthValue = (analogRead(pins::rectifiedVoltagePin)/maxValue*256);
+    char* signalStrengthValueBinary = intToBinary(signalStrengthValue);
     SignalGenerator signalStrengthPacket(0x01);
-    signalStrengthPacket.set_message_index(0, ByteGenerator(signalStrengthValueBinary[0],signalStrengthValueBinary[1],signalStrengthValueBinary[2],signalStrengthValueBinary[3],signalStrengthValueBinary[4],signalStrengthValueBinary[5],signalStrengthValueBinary[6],signalStrengthValueBinary[7]));
+    signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary[0],signalStrengthValueBinary[1],signalStrengthValueBinary[2],signalStrengthValueBinary[3],signalStrengthValueBinary[4],signalStrengthValueBinary[5],signalStrengthValueBinary[6],signalStrengthValueBinary[7]));
     sendSignal(signalStrengthPacket); 
 
 
@@ -249,7 +249,7 @@ void loop()
           sendSignal(controlErrorPacket);  
 
         }
-        bool after_power =  send_one_watt(); 
+        bool after_power =  sendOneWatt(); 
       
     }
     //END power transfer phase
