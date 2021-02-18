@@ -182,20 +182,6 @@ void loop()
   try{
       if (checkPowerAndSwitches())
       {
-        //BEGIN ping phase
-        delay(QiDelays::t_wake);
-        if(digitalRead(Pins::onOffSwitchPin)==HIGH){
-          int maxValue; //Set correct value idk what, same type as what analogRead returns 
-          int signalStrengthValue = (analogRead(Pins::rectifiedVoltagePin)/maxValue*256);
-          char* signalStrengthValueBinary = intToBinary(signalStrengthValue);
-          Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary));
-          sendSignal(Signals::signalStrengthPacket); 
-        }
-        else{
-          sendSignal(Signals::endPowerTransfer);
-        }
-
-
         //BEGIN ID & Config phase 
         if(checkPowerAndSwitches())
         {
