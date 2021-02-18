@@ -153,4 +153,5 @@ void SignalGenerator::m_generate_checksum()
 SignalGenerator::~SignalGenerator()
 {
     delete[]m_messages;
+    
 }
