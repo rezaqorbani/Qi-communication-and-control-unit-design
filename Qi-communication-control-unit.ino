@@ -180,9 +180,7 @@ void loop()
 //BEGIN selection phase
 
   try{
-      if (checkPowerAndSwitches())
-      {
-        //BEGIN ID & Config phase 
+      
         if(checkPowerAndSwitches())
         {
           //BEGIN ping phase
@@ -265,7 +263,7 @@ void loop()
           //END power transfer phase
         }
       }
-    }
+    
 
   catch(...) //If we cant start the system or something else happens
     {
