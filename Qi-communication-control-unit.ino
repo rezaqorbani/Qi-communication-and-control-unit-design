@@ -167,16 +167,18 @@ double calculatePower()
   return power;
 }
 
-void adjustpower()
-{
-
-}
 
 void setup()
 {
   // put your setup code here, to run once:
   // Här definierar vi alla Pins som ska användas
+  pinMode(Pins::modComPin, OUTPUT);
+  pinMode(Pins::onOffSwitchPin,INPUT);
   pinMode(Pins::powerLevelSwitch, INPUT);
+  pinMode(Pins::rectifiedVoltagePin, INPUT);
+  pinMode(Pins::shuntPin1, INPUT);
+  pinMode(Pins::shuntPin2, INPUT); 
+
 }
 
 void loop() 
