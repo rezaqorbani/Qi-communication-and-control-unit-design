@@ -287,7 +287,7 @@ void loop()
             }
 
 
-            Signals::receivedPowerPacket.setMessageIndex(0,ByteGenerator(intToBinary(averagePower/10)));
+            Signals::receivedPowerPacket.setMessageIndex(0,ByteGenerator(intToBinary(averagePower)));
 
             bool after_power =  oneOrHalfWatt(); 
             delay(QiDelays::t_silent);
