@@ -149,30 +149,29 @@ bool oneOrHalfWatt()
 }
 // starts the components in the 
 
-int calculate_power()
+double calculatePower()
 {
-    const float valueShunt = 0.5;
+  const double valueShunt = 0.5;
 
-    float inputValue = analogRead(Pins::shuntPin1) - analogRead(Pins::shuntPin2;
+  double inputValue = analogRead(Pins::shuntPin1) - analogRead(Pins::shuntPin2);
 
-    float voltage = inputValue * 5.0 / 1024.0;
-    float current = voltage / valueShunt;
-    float power = pow(voltage, 2) / valueShunt;
-
+  double voltage = inputValue * 5.0 / 1024.0;
+  double current = voltage / valueShunt;
+  double power = pow(voltage, 2) / valueShunt;
+  return power;
 }
 
+void adjustpower()
+{
 
+}
 
 void setup()
 {
   // put your setup code here, to run once:
   // Här definierar vi alla Pins som ska användas
   pinMode(Pins::powerLevelSwitch, INPUT);
-
-
-
 }
-
 
 void loop() 
 {   
@@ -248,17 +247,29 @@ void loop()
             {
               //if want to recieve one watt
               //Change the value of the message
-              sendSignal(Signals::controlErrorPacket);  
+              Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('0', '0', '0', '0', '1', '0', '0','0')); 
+              while(calculatePower() < 1)
+              {
+                sendSignal(Signals::controlErrorPacket);  
+              } 
+              
             }
             else if (!current_power)
             {
               //if want to recieve half watt
               //Change the value of the message
-              sendSignal(Signals::controlErrorPacket);  
+              Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
+              while(calculatePower() < 1)
+              {
+                sendSignal(Signals::controlErrorPacket);  
+              }   
 
             }
+
+          
+
             bool after_power =  oneOrHalfWatt(); 
-            
+            delay(QiDelays::t_silent);
           }
           //END power transfer phase
         }
