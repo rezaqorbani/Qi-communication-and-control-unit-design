@@ -9,6 +9,12 @@ namespace QiDelays
 {
   const int t_wake = 60; 
   const int t_silent = 7; 
+  const int t_received; 
+  const int t_window;
+  const int t_control;
+  const int t_offset;
+  const int powerValueDelay = 1; // delay for taking a power sample
+
 };
 
 namespace Pins
@@ -266,7 +272,22 @@ void loop()
 
             }
 
-          
+            //The values below are preliminary and have to be changed in order 
+            double powerValues [10]; 
+            for(int i = 0; i < 10; i)
+            {
+              powerValues[i] = calculatePower();
+              delay(1); 
+            }
+
+            double averagePower = 0;  
+            for(int i = 0; i < 10; i)
+            {
+              averagePower += powerValues[i]; 
+            }
+
+
+            Signals::receivedPowerPacket.setMessageIndex(0,ByteGenerator(intToBinary(averagePower/10)));
 
             bool after_power =  oneOrHalfWatt(); 
             delay(QiDelays::t_silent);
