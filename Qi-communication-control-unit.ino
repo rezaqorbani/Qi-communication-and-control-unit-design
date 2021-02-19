@@ -181,54 +181,54 @@ void loop()
 
   try{
       
+      if(checkPowerAndSwitches())
+      {
+        //BEGIN ping phase
+        delay(QiDelays::t_wake); 
+        
+        
+        int maxValue; //Set correct value idk what, same type as what analogRead returns 
+        int signalStrengthValue = (analogRead(Pins::rectifiedVoltagePin)/maxValue*256);
+        char* signalStrengthValueBinary = intToBinary(signalStrengthValue);
+        
+        Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary[0],signalStrengthValueBinary[1],signalStrengthValueBinary[2],signalStrengthValueBinary[3],signalStrengthValueBinary[4],signalStrengthValueBinary[5],signalStrengthValueBinary[6],signalStrengthValueBinary[7]));
+        sendSignal(Signals::signalStrengthPacket); 
+
+
+        //BEGIN ID & Config phase 
         if(checkPowerAndSwitches())
         {
-          //BEGIN ping phase
-          delay(QiDelays::t_wake); 
+          //Not completed
+          Signals::identificationPacket.setMessageIndex(0, ByteGenerator('0','0','0','1','0','0','1','0'));//Major/Minor version
+          Signals::identificationPacket.setMessageIndex(1, ByteGenerator('0','0','0','0','0','0','0','0'));//Påhittad manufacturer code del1
+          Signals::identificationPacket.setMessageIndex(2, ByteGenerator('0','0','0','0','0','0','0','1'));
+          //dessa nedan kan behöva ändras, beror på om vi behöver randomiza grejer
+          Signals::identificationPacket.setMessageIndex(3, ByteGenerator('1','0','0','0','0','0','0','0'));
+          Signals::identificationPacket.setMessageIndex(4, ByteGenerator('0','0','0','0','0','0','0','0'));
+          Signals::identificationPacket.setMessageIndex(5, ByteGenerator('0','0','0','0','0','0','0','0'));
+          Signals::identificationPacket.setMessageIndex(6, ByteGenerator('0','0','0','0','1','1','1','1'));
+          sendSignal(Signals::identificationPacket);
+          delay(QiDelays::t_silent);
           
-          
-          int maxValue; //Set correct value idk what, same type as what analogRead returns 
-          int signalStrengthValue = (analogRead(Pins::rectifiedVoltagePin)/maxValue*256);
-          char* signalStrengthValueBinary = intToBinary(signalStrengthValue);
-          
-          Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary[0],signalStrengthValueBinary[1],signalStrengthValueBinary[2],signalStrengthValueBinary[3],signalStrengthValueBinary[4],signalStrengthValueBinary[5],signalStrengthValueBinary[6],signalStrengthValueBinary[7]));
-          sendSignal(Signals::signalStrengthPacket); 
+          //Kanske följande
+          //SignalGenerator PowerControlHoldoffPacket(0x06);
+          //sendSignal(PowerControlHoldoffPacket); // Om vi vill ha en delay på reaktion från sändaren när vi ber om en ändrad spänning
+          //delay(qiDelays::t_silent);
+          //Garanterat följande
+          char* config_array;//osäker hur man initializar arrays 
+          config_array[7] = 0;
+          config_array[6] = 0;
+          // 5-0 ska vara maximum power value
+          Signals::configurationPacket.setMessageIndex(0, ByteGenerator(config_array));
+          Signals::configurationPacket.setMessageIndex(1, ByteGenerator('0','0','0','0','0','0','0','0'));//Reserved
+          Signals::configurationPacket.setMessageIndex(2, ByteGenerator('0','0','0','0','0','0','0','0'));
+          Signals::configurationPacket.setMessageIndex(3, ByteGenerator('0','0','0','0','0','0','0','0'));//Skall ändras
+          Signals::configurationPacket.setMessageIndex(4, ByteGenerator('0','0','0','0','0','0','0','0'));
+          sendSignal(Signals::configurationPacket);
+          delay(QiDelays::t_silent);
 
-
-          //BEGIN ID & Config phase 
-          if(checkPowerAndSwitches())
-          {
-            //Not completed
-            Signals::identificationPacket.setMessageIndex(0, ByteGenerator('0','0','0','1','0','0','1','0'));//Major/Minor version
-            Signals::identificationPacket.setMessageIndex(1, ByteGenerator('0','0','0','0','0','0','0','0'));//Påhittad manufacturer code del1
-            Signals::identificationPacket.setMessageIndex(2, ByteGenerator('0','0','0','0','0','0','0','1'));
-            //dessa nedan kan behöva ändras, beror på om vi behöver randomiza grejer
-            Signals::identificationPacket.setMessageIndex(3, ByteGenerator('1','0','0','0','0','0','0','0'));
-            Signals::identificationPacket.setMessageIndex(4, ByteGenerator('0','0','0','0','0','0','0','0'));
-            Signals::identificationPacket.setMessageIndex(5, ByteGenerator('0','0','0','0','0','0','0','0'));
-            Signals::identificationPacket.setMessageIndex(6, ByteGenerator('0','0','0','0','1','1','1','1'));
-            sendSignal(Signals::identificationPacket);
-            delay(QiDelays::t_silent);
-            
-            //Kanske följande
-            //SignalGenerator PowerControlHoldoffPacket(0x06);
-            //sendSignal(PowerControlHoldoffPacket); // Om vi vill ha en delay på reaktion från sändaren när vi ber om en ändrad spänning
-            //delay(qiDelays::t_silent);
-            //Garanterat följande
-            char* config_array;//osäker hur man initializar arrays 
-            config_array[7] = 0;
-            config_array[6] = 0;
-            // 5-0 ska vara maximum power value
-            Signals::configurationPacket.setMessageIndex(0, ByteGenerator(config_array));
-            Signals::configurationPacket.setMessageIndex(1, ByteGenerator('0','0','0','0','0','0','0','0'));//Reserved
-            Signals::configurationPacket.setMessageIndex(2, ByteGenerator('0','0','0','0','0','0','0','0'));
-            Signals::configurationPacket.setMessageIndex(3, ByteGenerator('0','0','0','0','0','0','0','0'));//Skall ändras
-            Signals::configurationPacket.setMessageIndex(4, ByteGenerator('0','0','0','0','0','0','0','0'));
-            sendSignal(Signals::configurationPacket);
-            delay(QiDelays::t_silent);
-
-          }
-          //END ID & Config phase
+        }
+        //END ID & Config phase
 
 
 
@@ -238,26 +238,26 @@ void loop()
           while(checkPowerAndSwitches())
           {
 
-              delay(QiDelays::t_silent);
-              bool current_power = oneOrHalfWatt(); //if true 1 watt, else 0.5 watt
-              bool cont = true;
+            delay(QiDelays::t_silent);
+            bool current_power = oneOrHalfWatt(); //if true 1 watt, else 0.5 watt
+            bool cont = true;
+            
 
+            // This if else claus is for changing the power level (0.5W to 1W)
+            if(current_power)
+            {
+              //if want to recieve one watt
+              //Change the value of the message
+              sendSignal(Signals::controlErrorPacket);  
+            }
+            else if (!current_power)
+            {
+              //if want to recieve half watt
+              //Change the value of the message
+              sendSignal(Signals::controlErrorPacket);  
 
-              // This if else claus is for changing the power level (0.5W to 1W)
-              if(current_power)
-              {
-                //if want to recieve one watt
-                //Change the value of the message
-                sendSignal(Signals::controlErrorPacket);  
-              }
-              else if (!current_power)
-              {
-                //if want to recieve half watt
-                //Change the value of the message
-                sendSignal(Signals::controlErrorPacket);  
-
-              }
-              bool after_power =  oneOrHalfWatt(); 
+            }
+            bool after_power =  oneOrHalfWatt(); 
             
           }
           //END power transfer phase
