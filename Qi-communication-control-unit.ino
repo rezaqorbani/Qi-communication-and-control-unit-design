@@ -106,30 +106,16 @@ bool sendSignal(SignalGenerator signal)
 
 
 
-bool checkPowerAndSwitches() // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
-{ 
-  // checks if the Primary Cell current amplitude crosses 50% of the stable level
-  //A method that should be called repeteadly, to ensure that we do not miss a signalchange. FIX IDK idk vad det ska ha för type
-  //the value below can be changed, idk what is right
-  //If the ifstatment below is fullfilled, it means we have a power signal, and the system should boot up. 
-  int X;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
-  //dessa kan ev. ersättas av ett fett if(X or Y or Z), vet inte vilket som blir bäst 
-  if(analogRead(Pins::rectifiedVoltagePin)<X){
-    //No more power signal = return to selection phase/turn off
-    return false;
-    }
-  else if(digitalRead(Pins::onOffSwitchPin)==LOW){//Assuming LOW=on off position
-    //System has been turned off, so disconnect the output to the load
-    return false;
-    }
-  //Nedan behöver fixas - digitalRead returnerar ju ett HIGH eller LOW vi måste veta vilken som är vilken
-  else if(digitalRead(Pins::powerLevelSwitch)!=currentPowerLevelState){//måste veta current state, vi får hitta på en variabel som jag nu döpt till powerLevelSwitchState, och definiera den. om det har förändrats ska:
-    //Reboot with new configuration, send EndPowerTransfer
-    return false;
-    }
-  else{
-    return true;
-  }
+double calculatePower()
+{
+    const double valueShunt = 0.5;
+
+    double inputValue = analogRead(Pins::shuntPin1) - analogRead(Pins::shuntPin2);
+
+    double voltage = inputValue * 5.0 / 1024.0;
+    double current = voltage / valueShunt;
+    double power = pow(voltage, 2) / valueShunt;
+    return power; 
 }
 
 
@@ -195,14 +181,14 @@ void loop()
         delay(QiDelays::t_wake); 
         
         
-        int maxValue = 5; //
-        int signalStrengthValue = (analogRead(Pins::rectifiedVoltagePin)*0.0049/maxValue*256);
+        int maxValue = 2.36; //
+        int signalStrengthValue = (analogRead(Pins::rectifiedVoltagePin)*(0.0049)/maxValue*256);
         if(signalStrengthValue >256){
           signalStrengthValue = 255;
         }
         char* signalStrengthValueBinary = intToBinary(signalStrengthValue);
         
-        Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary[0],signalStrengthValueBinary[1],signalStrengthValueBinary[2],signalStrengthValueBinary[3],signalStrengthValueBinary[4],signalStrengthValueBinary[5],signalStrengthValueBinary[6],signalStrengthValueBinary[7]));
+        Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary));
         sendSignal(Signals::signalStrengthPacket); 
 
 
