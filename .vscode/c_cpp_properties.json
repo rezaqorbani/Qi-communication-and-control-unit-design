@@ -3,15 +3,15 @@
         {
             "name": "Win32",
             "includePath": [
-                "C:\\Users\\Reza\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
-                "C:\\Users\\Reza\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.7.4\\**",
                 "D:\\Files\\arduino\\tools\\**",
                 "C:\\Users\\Reza\\Documents\\Arduino\\libraries\\**",
                 "D:\\Files\\arduino\\libraries\\**",
                 "D:\\Files\\arduino\\hardware\\tools\\**",
                 "D:\\Files\\arduino\\hardware\\arduino\\avr\\**"
             ],
-            "forcedInclude": [],
+            "forcedInclude": [
+                "D:\\Files\\arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
+            ],
             "defines": [
                 "USBCON"
             ],
