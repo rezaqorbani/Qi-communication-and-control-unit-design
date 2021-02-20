@@ -40,7 +40,7 @@ namespace Signals
 };
 
 
-const bool currentPowerLevelState; 
+const bool currentPowerLevelState; //Den ska väl inte vara konstant, vi ändrar den ju
 
 
 // Sends a given signal
@@ -122,6 +122,7 @@ bool checkPowerAndSwitches() // vet inte riktigt hur den ska implementeras eller
     //System has been turned off, so disconnect the output to the load
     return false;
     }
+  //Nedan behöver fixas - digitalRead returnerar ju ett HIGH eller LOW vi måste veta vilken som är vilken
   else if(digitalRead(Pins::powerLevelSwitch)!=currentPowerLevelState){//måste veta current state, vi får hitta på en variabel som jag nu döpt till powerLevelSwitchState, och definiera den. om det har förändrats ska:
     //Reboot with new configuration, send EndPowerTransfer
     return false;
@@ -149,7 +150,7 @@ bool oneOrHalfWatt()
   //checks the button on arduino that chooses between 1 and 0.5 watt power transfer. 
   //if true send 1 watt
   //else send 0.5 watt
-  int stateButton = digitalRead(Pins::powerLevelSwitch);
+  int stateButton = digitalRead(Pins::powerLevelSwitch); //Vet inte om det här stämmer, är HIGH=TRUE här eller?
   return bool(stateButton); 
 
 }
@@ -226,10 +227,20 @@ void loop()
           config_array[7] = 0;
           config_array[6] = 0;
           // 5-0 ska vara maximum power value
+          if(oneOrHalfWatt()){
+            currentPowerLevelState = true;
+
+
+          }
+          else{
+            currentPowerLevelState = false;
+
+            
+          }
           Signals::configurationPacket.setMessageIndex(0, ByteGenerator(config_array));
           Signals::configurationPacket.setMessageIndex(1, ByteGenerator('0','0','0','0','0','0','0','0'));//Reserved
           Signals::configurationPacket.setMessageIndex(2, ByteGenerator('0','0','0','0','0','0','0','0'));
-          Signals::configurationPacket.setMessageIndex(3, ByteGenerator('0','0','0','0','0','0','0','0'));//Skall ändras
+          Signals::configurationPacket.setMessageIndex(3, ByteGenerator('0','0','0','0','0','0','0','0'));//Skall ändras detta är window size samt window offset
           Signals::configurationPacket.setMessageIndex(4, ByteGenerator('0','0','0','0','0','0','0','0'));
           sendSignal(Signals::configurationPacket);
           delay(QiDelays::t_silent);
