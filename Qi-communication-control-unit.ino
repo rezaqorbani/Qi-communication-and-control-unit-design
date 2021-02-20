@@ -1,5 +1,5 @@
 /*
-Created by: 
+Created by: Tova & Reza
 */
 #include "ByteGenerator.h"
 #include "SignalGenerator.h"
