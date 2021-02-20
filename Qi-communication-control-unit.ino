@@ -40,7 +40,7 @@ namespace Signals
 };
 
 
-const bool currentPowerLevelState; //Den ska väl inte vara konstant, vi ändrar den ju
+bool currentPowerLevelState; //Den ska väl inte vara konstant, vi ändrar den ju
 
 
 // Sends a given signal
@@ -193,17 +193,21 @@ void loop()
       {
         //BEGIN ping phase
         delay(QiDelays::t_wake); 
-        
-        
+        if(digitalRead(Pins::onOffSwitchPin)){
+          Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','1'));
+          sendSignal(Signals::endPowerTransfer);
+        }
+        else{
         int maxValue = 5; //
-        int signalStrengthValue = (analogRead(Pins::rectifiedVoltagePin)*0.0049/maxValue*256);
+        int signalStrengthValue = (analogRead(Pins::rectifiedVoltagePin)*5/1024/maxValue*256);
         if(signalStrengthValue >256){
           signalStrengthValue = 255;
         }
         char* signalStrengthValueBinary = intToBinary(signalStrengthValue);
         
-        Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary[0],signalStrengthValueBinary[1],signalStrengthValueBinary[2],signalStrengthValueBinary[3],signalStrengthValueBinary[4],signalStrengthValueBinary[5],signalStrengthValueBinary[6],signalStrengthValueBinary[7]));
+        Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary));
         sendSignal(Signals::signalStrengthPacket); 
+        }
 
 
         //BEGIN ID & Config phase 
@@ -226,24 +230,25 @@ void loop()
           //sendSignal(PowerControlHoldoffPacket); // Om vi vill ha en delay på reaktion från sändaren när vi ber om en ändrad spänning
           //delay(qiDelays::t_silent);
           //Garanterat följande
-          char* config_array;//osäker hur man initializar arrays 
-          config_array[7] = 0;
-          config_array[6] = 0;
+          //char* config_array;//osäker hur man initializar arrays 
+          //config_array[7] = 0;
+          //config_array[6] = 0;
           // 5-0 ska vara maximum power value
           if(oneOrHalfWatt()){
             currentPowerLevelState = true;
+            Signals::configurationPacket.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','1','0'));
 
 
           }
           else{
             currentPowerLevelState = false;
+            Signals::configurationPacket.setMessageIndex(0, ByteGenerator('0','0','0','0','0','1','0','0'));
 
             
           }
-          Signals::configurationPacket.setMessageIndex(0, ByteGenerator(config_array));
           Signals::configurationPacket.setMessageIndex(1, ByteGenerator('0','0','0','0','0','0','0','0'));//Reserved
           Signals::configurationPacket.setMessageIndex(2, ByteGenerator('0','0','0','0','0','0','0','0'));
-          Signals::configurationPacket.setMessageIndex(3, ByteGenerator('0','0','0','0','0','0','0','0'));//Skall ändras detta är window size samt window offset
+          Signals::configurationPacket.setMessageIndex(3, ByteGenerator('0','1','0','1','0','0','0','0'));//Skall ändras detta är window size samt window offset
           Signals::configurationPacket.setMessageIndex(4, ByteGenerator('0','0','0','0','0','0','0','0'));
           sendSignal(Signals::configurationPacket);
           delay(QiDelays::t_silent);
@@ -269,7 +274,7 @@ void loop()
             {
               //if want to recieve one watt
               //Change the value of the message
-              Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('0', '0', '0', '0', '1', '0', '0','0')); 
+              //Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('0', '0', '0', '0', '1', '0', '0','0')); 
               while(calculatePower() < 1)
               {
                 sendSignal(Signals::controlErrorPacket);  
@@ -280,7 +285,7 @@ void loop()
             {
               //if want to recieve half watt
               //Change the value of the message
-              Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
+             // Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
               while(calculatePower() < 1)
               {
                 sendSignal(Signals::controlErrorPacket);  
