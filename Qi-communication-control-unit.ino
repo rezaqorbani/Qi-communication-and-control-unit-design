@@ -195,8 +195,11 @@ void loop()
         delay(QiDelays::t_wake); 
         
         
-        int maxValue; //Set correct value idk what, same type as what analogRead returns 
-        int signalStrengthValue = (analogRead(Pins::rectifiedVoltagePin)/maxValue*256);
+        int maxValue = 5; //
+        int signalStrengthValue = (analogRead(Pins::rectifiedVoltagePin)*0.0049/maxValue*256);
+        if(signalStrengthValue >256){
+          signalStrengthValue = 255;
+        }
         char* signalStrengthValueBinary = intToBinary(signalStrengthValue);
         
         Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary[0],signalStrengthValueBinary[1],signalStrengthValueBinary[2],signalStrengthValueBinary[3],signalStrengthValueBinary[4],signalStrengthValueBinary[5],signalStrengthValueBinary[6],signalStrengthValueBinary[7]));
