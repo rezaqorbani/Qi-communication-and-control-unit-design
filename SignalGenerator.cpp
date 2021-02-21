@@ -4,8 +4,7 @@
 SignalGenerator::SignalGenerator(int header)
 {
     m_header_hex = header;
-    this->m_create_header(header);
-    this->m_messages = new ByteGenerator[this->m_calculate_message_size()];
+    this->m_create_header(header);   
 
 }
 
@@ -152,6 +151,5 @@ void SignalGenerator::m_generate_checksum()
 
 SignalGenerator::~SignalGenerator()
 {
-    delete[]m_messages;
     
 }

@@ -24,7 +24,7 @@ class SignalGenerator
     ByteGenerator m_header_byte;
     int m_header_hex;               //the the numerical value of header (not the byte representing the header)
     int m_messages_size;
-    ByteGenerator* m_messages;
+    ByteGenerator m_messages [7];
     ByteGenerator m_checksum = ByteGenerator('1','1','1','1','1','1','1','1');
     char* m_signal;
     int m_calculate_message_size(); //calculates the size of the message

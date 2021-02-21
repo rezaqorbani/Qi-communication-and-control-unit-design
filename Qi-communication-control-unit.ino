@@ -4,6 +4,7 @@ Created by:
 #include "ByteGenerator.h"
 #include "SignalGenerator.h"
 
+
 //The delays (in millisecond) for the signal in Qi-spec. 
 namespace QiDelays
 {
@@ -52,7 +53,7 @@ bool signalState = false;
 // Med utgång i att en HIGH pin ger en LOW på primärsida och LOW pin her HIGH på primärsidan 
 // När komMod är avstängd är pin LOW (dvs switch öppen)
 // För bools är TRUE = HIGH och FALSE=LOW
-int sendSignal(SignalGenerator signal) 
+void sendSignal(SignalGenerator signal) 
 {
 
   for (int i = 0; i < signal.getSignalSize(); i++)
@@ -95,8 +96,8 @@ int sendSignal(SignalGenerator signal)
         }
     }
   }
-  
-  return 1; 
+    
+  return; 
 }
 
 
@@ -214,7 +215,7 @@ void loop()
         //BEGIN ID & Config phase 
         if(checkPowerAndSwitches())
         {
-          
+          Serial.println("Start Config\n");
           delay(QiDelays::t_silent);
           
           //Not completed
@@ -229,7 +230,7 @@ void loop()
           
           
           sendSignal(Signals::identificationPacket);
-          
+          Serial.println("EndConfig\n");
           delay(QiDelays::t_silent);
           
           //Kanske följande
@@ -272,10 +273,13 @@ void loop()
           while(checkPowerAndSwitches())
           {
 
-            Serial.println("PowerTransfer"); 
+            //Serial.println("PowerTransfer"); 
             //Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0', '0', '1', '0','0','0','0')); 
             //sendSignal(Signals::controlErrorPacket);  
-            Serial.println(calculatePower());
+            //Serial.println(calculatePower());
+            
+            
+            
             
             /*
             bool current_power = oneOrHalfWatt(); //if true 1 watt, else 0.5 watt
