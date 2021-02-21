@@ -1,7 +1,0 @@
-{
-    "board": "arduino:avr:uno",
-    "sketch": "Qi-communication-control-unit.ino",
-    "port": "COM6",
-
-    "programmer": "ArduinoISP"
-}
