@@ -11,36 +11,39 @@ SignalGenerator::SignalGenerator(int header)
 
 void SignalGenerator::setMessageIndex(int index, ByteGenerator message)
 {
-    this->m_messages[index] = message;
+    for(int i = 0; i < 11; i++)
+    {
+    this->m_messages[index][i] = message.get_byte()[i];
+    }
     this->m_generate_checksum();
 }
 
 
 char* SignalGenerator::getMessageByte(int index)
 {
-    return m_messages[index].get_byte();
+    return m_messages[index];
 }
 
 
 char* SignalGenerator::getSignal()
 {
 
-    char output [this->getSignalSize()];
-    this->m_signal = output;
+    char* m_signal = new char [this->getSignalSize()];
+
 
     int byte_index = 0;
 
-    for(int i = 0; i < 11 ; i++,byte_index++ )//preamble
+    for(int i = 0; i < 15; i++,byte_index++ )//preamble
     {
 
-                this->m_signal[byte_index] = this->m_preamble.get_byte()[i];
+                m_signal[byte_index] = this->m_preamble[i];
 
     }
 
 
     for(int j =  0 ; j < 11; j++, byte_index++)//header
     {
-        this->m_signal[byte_index] = m_header_byte.get_byte()[j];
+        m_signal[byte_index] = m_header_byte.get_byte()[j];
     }
 
 
@@ -49,7 +52,7 @@ char* SignalGenerator::getSignal()
     {
         for(int j = 0; j < 11; j++, byte_index++)
         {
-                this->m_signal[byte_index] = this->m_messages->get_byte()[j];
+                m_signal[byte_index] = this->m_messages[i][j];
 
         }
     }
@@ -57,10 +60,10 @@ char* SignalGenerator::getSignal()
 
     for(int j =  0 ; j < 11; j++, byte_index++)
     {
-         this->m_signal[byte_index] = m_checksum.get_byte()[j];
+         m_signal[byte_index] = m_checksum.get_byte()[j];
     }
 
-    return this->m_signal;
+    return m_signal;
 }
 
 
@@ -70,7 +73,7 @@ int SignalGenerator::getSignalSize()
 {
     int signal_size = 0;
 
-    signal_size += 11; //preamble size
+    signal_size += 15; //preamble size
 
     signal_size += 11; // add 11 for the size of header
 
@@ -86,7 +89,7 @@ int SignalGenerator::getSignalSize()
 
 void SignalGenerator::m_create_header(int header) //fill in te signal with given heaefer from int to bit car array
 {
-    int byte_size = 11;
+    int byte_size = 8;
     unsigned int mask = 1U << (byte_size-1);
     int index;
     for (index = 0; index < byte_size; index++) {
@@ -132,17 +135,17 @@ int SignalGenerator::m_calculate_message_size()
 void SignalGenerator::m_generate_checksum()
 {
 
-    for(int bit = 0; bit < 11; bit++)
+    for(int bit = 1; bit < 9; bit++)
     {
-        this->m_checksum.get_byte()[bit] = ((this->m_header_byte.get_byte()[bit] - '0') ^ (this->m_messages[0].get_byte()[bit] - '0'))?'1':'0';
+        this->m_checksum.get_byte()[bit] = ((this->m_header_byte.get_byte()[bit] - '0') ^ (this->m_messages[0][bit] - '0')) ?'1':'0';
     }
 
     for (int index = 1; index < this->m_calculate_message_size(); index++)
     {
 
-        for(int bit = 1; bit < 11 ; bit++)
+        for(int bit = 1; bit < 9 ; bit++)
         {
-            this->m_checksum.get_byte()[bit] = ((this->m_messages[index].get_byte()[bit] - '0') ^ (this->m_checksum.get_byte()[bit] - '0'))?'1':'0';
+            this->m_checksum.get_byte()[bit] = ((this->m_messages[index][bit] - '0') ^ (this->m_checksum.get_byte()[bit] - '0'))?'1':'0';
         }
     }
 

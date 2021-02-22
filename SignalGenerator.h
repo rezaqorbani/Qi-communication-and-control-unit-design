@@ -20,13 +20,12 @@ class SignalGenerator
     ~SignalGenerator();
 
   private:
-    ByteGenerator m_preamble = ByteGenerator('1','1','1','1','1','1','1','1');
+    char m_preamble [15] = {'1','1','1','1','1','1','1','1','1','1','1','1','1','1','1'};
     ByteGenerator m_header_byte;
     int m_header_hex;               //the the numerical value of header (not the byte representing the header)
     int m_messages_size;
-    ByteGenerator m_messages [7];
+    char m_messages [7][11];
     ByteGenerator m_checksum = ByteGenerator('1','1','1','1','1','1','1','1');
-    char* m_signal;
     int m_calculate_message_size(); //calculates the size of the message
     void m_generate_checksum();  //Creates the checksum for the signal
     void m_create_header(int); // Get a hex value and turn it into a array of chars for representing the byte.
