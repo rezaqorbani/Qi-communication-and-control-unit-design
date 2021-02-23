@@ -1,5 +1,5 @@
 /*
-Created by: Tova & Reza
+Created by: Reza Qorbani & Tova Stroeven
 */
 #include "ByteGenerator.h"
 #include "SignalGenerator.h"
@@ -37,15 +37,18 @@ namespace Signals
 	SignalGenerator controlErrorPacket(0x03); 
 	SignalGenerator receivedPowerPacket(0x04);
 	SignalGenerator endPowerTransfer(0x02); 
-};
+}
+
+
 
 
 void sendSignal(SignalGenerator signal) 
 {
 	bool signalState = 0;
 	char* signalArray = signal.getSignal();
+	int signalSize = signal.getSignalSize();
 
-	for (int i = 0; i < 48; i++)
+	for (int i = 0; i < signalSize; i++)
 	{
 
 
@@ -69,42 +72,36 @@ void sendSignal(SignalGenerator signal)
 }
 
 
-bool checkPowerAndSwitches() // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
+bool checkPing() // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
 { 
   
 	float lowerLimitVoltage = 2;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
 
 	int sensorValue = analogRead(Pins::rectifiedVoltagePin); 
 	float voltage = sensorValue * (5.0 / 1023.0);
+	
 
 	return (voltage >= lowerLimitVoltage);
    
 }
 
-//conver int to binary
-char* intToBinary(int n, char *ret)
+bool checkOnSwitch()
 {
-	int index = 0; 
-	while(n!=0) {ret[index] = (n%2==0 ?'0':'1'); index++; n/=2;}
-	return ret;
+	bool isOn = digitalRead(Pins::onOffSwitchPin);
+	return isOn;
+}
+
+//conver int to binary
+char binaryCharArray[8] = {'0', '0','0', '0','0', '0','0', '0'}; 
+void intToBinary(int n)
+{
+	int index = 7; 
+	while(n!=0) {binaryCharArray[index] = (n%2==0 ?'0':'1'); index--; n/=2;}
 }
 
 bool oneOrHalfWatt()
 {
 	return (digitalRead(Pins::powerLevelSwitch)); //Vet inte om det här stämmer, är HIGH=TRUE här eller?
-}
-
-
-double calculatePower()
-{
-	const double valueShunt = 0.5;
-
-	double inputValue = analogRead(Pins::shuntPin1) - analogRead(Pins::shuntPin2);
-
-	double voltage = inputValue * 5.0 / 1024.0;
-	double current = voltage / valueShunt;
-	double power = pow(voltage, 2) / valueShunt;
-	return power;
 }
 
 double calculateVoltage()
@@ -116,11 +113,20 @@ double calculateVoltage()
 	return voltage; 
 }
 
+double calculatePower()
+{
+	const double valueShunt = 0.5;
+	double voltage = calculateVoltage();
+	double current = voltage / valueShunt;
+	double power = pow(voltage, 2) / valueShunt;
+	return power;
+}
+
 void pingPhase()
 {
 	delay(QiDelays::t_wake); 
 
-	if(digitalRead(Pins::onOffSwitchPin))
+	if(!digitalRead(Pins::onOffSwitchPin))
 	{
 		Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','1'));
 		sendSignal(Signals::endPowerTransfer);
@@ -136,12 +142,10 @@ void pingPhase()
 		{
 			signalStrengthValue = 255;
 		}
+
+		intToBinary(signalStrengthValue);
 		
-		char temp [8];
-		char *signalStrengthValueBinary; 
-		signalStrengthValueBinary = intToBinary(signalStrengthValue, temp);
-		
-		Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(signalStrengthValueBinary));
+		Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(binaryCharArray));
 		sendSignal(Signals::signalStrengthPacket); 
 	}
 }
@@ -178,51 +182,61 @@ void idConfigPhase()
 
 void powerTransfer()
 {
-	//bool current_power = oneOrHalfWatt(); //if true 1 watt, else 0.5 watt
-	bool current_power = true;
-	bool cont = true;
 
-	// This if else claus is for changing the power level (0.5W to 1W)
-	if(current_power)
-	{
-	//if want to recieve one watt
-	//Change the value of the message
-	//
-		while(calculatePower() < 1)
-		{	
-			Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('0', '0', '0', '0', '1', '0', '0','0')); 
-			sendSignal(Signals::controlErrorPacket);  
-		} 
+	
+		//bool current_power = oneOrHalfWatt(); //if true 1 watt, else 0.5 watt
+		bool current_power = true;
+		bool cont = true;
 
-	}
-	else if (!current_power)
-	{
-	//if want to recieve half watt
-	//Change the value of the message
-	// Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
-		while(calculatePower() < 1)
+		// This if else claus is for changing the power level (0.5W to 1W)
+		if(current_power)
 		{
-			delay(QiDelays::t_error); 
-			Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
-			sendSignal(Signals::controlErrorPacket);  
-		}   
-	}
-	//The values below are preliminary and have to be changed in order 
-	double powerValues [8]; 
-	for(int i = 0; i < 8; i)
-	{
-		powerValues[i] = calculatePower();
-		delay(1); 
-	}
-	double averagePower = 0;  
-	for(int i = 0; i < 10; i)
-	{
-		averagePower += powerValues[i]; 
-	}
-	delay(QiDelays::t_offset); 
-	sendSignal(Signals::receivedPowerPacket); 
-	bool after_power =  oneOrHalfWatt(); 
-	delay(QiDelays::t_silent);	
+		//if want to recieve one watt
+		//Change the value of the message
+		//
+			while(calculatePower() < 1)
+			{	
+				Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('0', '0', '0', '0', '1', '0', '0','0')); 
+				sendSignal(Signals::controlErrorPacket);  
+			} 
+
+		}
+		else if (!current_power)
+		{
+		//if want to recieve half watt
+		//Change the value of the message
+		// Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
+			while(calculatePower() < 1)
+			{
+				delay(QiDelays::t_error); 
+				Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
+				sendSignal(Signals::controlErrorPacket);  
+			}   
+		}
+		//The values below are preliminary and have to be changed in order 
+		double powerValues [8]; 
+		for(int i = 0; i < 8; i)
+		{
+			powerValues[i] = calculatePower();
+			delayMicroseconds(900); 
+		}
+
+		double averagePower = 0;  
+		for(int i = 0; i < 10; i)
+		{
+			averagePower += powerValues[i]; 
+		}
+
+		averagePower = averagePower/8; 
+		int powerReceived = (averagePower/128) * (1/2); 
+		intToBinary(powerReceived);
+		Signals::receivedPowerPacket.setMessageIndex(0, ByteGenerator(binaryCharArray)); 
+		delay(QiDelays::t_offset); 
+		sendSignal(Signals::receivedPowerPacket); 
+		bool after_power =  oneOrHalfWatt(); 
+
+
+		
           
 }
 
@@ -241,32 +255,54 @@ void setup()
 
 void loop() 
 {   
-
 // put your main code here, to run repeatedly:
 //BEGIN selection phase
   
-	if(checkPowerAndSwitches())
+	if(checkPing() && checkOnSwitch())
 	{
 	//Begin ping phase  
-		pingPhase(); 
-	//BEGIN ID & Config phase 
-	if(checkPowerAndSwitches())
-	{
-		idConfigPhase();
-
-	//BEGIN power transfer phase
-		while(checkPowerAndSwitches())
-		{
-			powerTransfer();
-		}
-	//END power transfer phase
-
-	}
-	//END ID & Config phase
-	}
+		pingPhase();
 	//END ping phase  
+
+	
+	
+		if(checkPing() && checkOnSwitch())
+		{
+			//BEGIN ID & Config phase 
+			idConfigPhase();
+			//END ID & Config phase
+
+
+			if(checkPing() && checkOnSwitch())
+			{
+				//END power transfer phase
+				while(checkPing() && checkOnSwitch())
+				{
+					powerTransfer();
+				}
+				if(!checkOnSwitch())
+				{
+					while(checkPing())
+					{
+						Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','1'));
+						sendSignal(Signals::endPowerTransfer);
+						return; 
+					}
+				}
+				else
+				{
+					while(checkPing())
+					Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','0'));
+					sendSignal(Signals::endPowerTransfer);
+					return; 
+				}
+				//BEGIN power transfer phase
+			}
+	
+		}
+		
+	}
     
 //END selection phase
-  
 }
 
