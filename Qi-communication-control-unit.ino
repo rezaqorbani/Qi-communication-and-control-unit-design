@@ -208,8 +208,8 @@ void powerTransfer()
 		}   
 	}
 	//The values below are preliminary and have to be changed in order 
-	double powerValues [10]; 
-	for(int i = 0; i < 10; i)
+	double powerValues [8]; 
+	for(int i = 0; i < 8; i)
 	{
 		powerValues[i] = calculatePower();
 		delay(1); 
@@ -219,7 +219,7 @@ void powerTransfer()
 	{
 		averagePower += powerValues[i]; 
 	}
-	
+	delay(QiDelays::t_offset); 
 	sendSignal(Signals::receivedPowerPacket); 
 	bool after_power =  oneOrHalfWatt(); 
 	delay(QiDelays::t_silent);	
