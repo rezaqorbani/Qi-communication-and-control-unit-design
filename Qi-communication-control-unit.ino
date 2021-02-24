@@ -10,10 +10,8 @@ namespace QiDelays
 {
 	const int t_wake = 40; 
 	const int t_silent = 7; 
-	const int t_received ; 
 	const int t_window = 8; //unit of 4ms, total 8 ms
 	const int t_offset = 4; //unit of 4ms, total 4ms
-	const int t_error ;
 	const int powerValueDelay = 1; // delay for taking a power sample
 
 }
@@ -40,7 +38,7 @@ namespace Signals
 }
 
 
-
+float pingVoltage;
 
 void sendSignal(SignalGenerator signal) 
 {
@@ -51,7 +49,7 @@ void sendSignal(SignalGenerator signal)
 	for (int i = 0; i < signalSize; i++)
 	{
 
-
+		
 		signalState = !signalState;
 		digitalWrite(Pins::modComPin, signalState); 
 		delayMicroseconds(250);
@@ -64,7 +62,7 @@ void sendSignal(SignalGenerator signal)
 		delayMicroseconds(250);
 
 	}
-
+	
 	digitalWrite(Pins::modComPin, LOW); 
 	delete[] signalArray;
 	signalArray = nullptr;
@@ -75,12 +73,13 @@ void sendSignal(SignalGenerator signal)
 bool checkPing() // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
 { 
   
-	float lowerLimitVoltage = 2;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
+	float lowerLimitVoltage = 0.1;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
+	//int sensorValue = 0;
 
 	int sensorValue = analogRead(Pins::rectifiedVoltagePin); 
-	float voltage = sensorValue * (5.0 / 1023.0);
+	float voltage = sensorValue * (5.0 / 1024.0);
 	
-
+	pingVoltage = voltage; 
 	return (voltage >= lowerLimitVoltage);
    
 }
@@ -88,7 +87,8 @@ bool checkPing() // vet inte riktigt hur den ska implementeras eller vart den sk
 bool checkOnSwitch()
 {
 	bool isOn = digitalRead(Pins::onOffSwitchPin);
-	return isOn;
+	//return isOn;
+	return true; //ÄNDRA sätt dedär kommentaren ovan
 }
 
 //conver int to binary
@@ -122,37 +122,66 @@ double calculatePower()
 	return power;
 }
 
+void setReceivedPowerMessage()
+{
+	
+	double powerValues [8]; 
+	for(int i = 0; i < 8; i++)
+	{
+		Serial.println(i);
+		powerValues[i] = calculatePower();
+		delayMicroseconds(900); 
+	}
+	
+	
+
+	double averagePower = 0;  
+	for(int i = 0; i < 10; i++)
+	{
+		averagePower += powerValues[i]; 
+	}
+	averagePower = averagePower/8; 
+	int powerReceived = (averagePower/128) * (1/2); 
+	intToBinary(powerReceived);
+	Signals::receivedPowerPacket.setMessageIndex(0, ByteGenerator(binaryCharArray)); 
+	
+}
+
 void pingPhase()
 {
 	delay(QiDelays::t_wake); 
-
-	if(!digitalRead(Pins::onOffSwitchPin))
+	if(digitalRead(Pins::onOffSwitchPin)) //ÄNDRA sätt ett !
 	{
+		
 		Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','1'));
 		sendSignal(Signals::endPowerTransfer);
 		return; 
 	}
 
 	else{
-		int maxValue = 5; 
-		int sensorValue = analogRead(Pins::rectifiedVoltagePin)*5/1024; 
-		int signalStrengthValue = (sensorValue/maxValue)*256;
+		
+		double maxValue = 5.0; 
+
+		// int sensorValue = analogRead(Pins::rectifiedVoltagePin);
+		// double voltage = analogRead(Pins::rectifiedVoltagePin)*5/1024; 
+
+
+		int signalStrengthValue = (pingVoltage/maxValue)*256;
 
 		if(signalStrengthValue >256)
 		{
 			signalStrengthValue = 255;
 		}
-
-		intToBinary(signalStrengthValue);
-		
+		intToBinary(255);
 		Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(binaryCharArray));
 		sendSignal(Signals::signalStrengthPacket); 
+		delay(7);
 	}
 }
 
 void idConfigPhase()
 {
-	delay(QiDelays::t_silent);
+	delay(2);
 
 	//Not completed
 	Signals::identificationPacket.setMessageIndex(0, ByteGenerator('0','0','0','1','0','0','1','0'));//Major/Minor version
@@ -172,32 +201,55 @@ void idConfigPhase()
 	Signals::configurationPacket.setMessageIndex(0, ByteGenerator('0','0','0','0','0','1','0','0'));
 	Signals::configurationPacket.setMessageIndex(1, ByteGenerator('0','0','0','0','0','0','0','0'));//Reserved
 	Signals::configurationPacket.setMessageIndex(2, ByteGenerator('0','0','0','0','0','0','0','0'));
-	Signals::configurationPacket.setMessageIndex(3, ByteGenerator('0','1','0','1','0','0','0','1'));//Skall ändras detta är window size samt window offset
+	Signals::configurationPacket.setMessageIndex(3, ByteGenerator('0','0','0','1','0','0','0','1'));//window size 8 samt window offset 4
 	Signals::configurationPacket.setMessageIndex(4, ByteGenerator('0','0','0','0','0','0','0','0'));
 
 	sendSignal(Signals::configurationPacket);
-	delay(QiDelays::t_silent);
 
 }
 
 void powerTransfer()
 {
-
 	
-		//bool current_power = oneOrHalfWatt(); //if true 1 watt, else 0.5 watt
-		bool current_power = true;
-		bool cont = true;
+	delay(90); 
+	//bool current_power = oneOrHalfWatt(); //if true 1 watt, else 0.5 watt
+	
+	
+	Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0', '0', '0', '0', '1', '0', '0','0')); 
+	sendSignal(Signals::controlErrorPacket);  
+	delay(40); 
+	
+	for(int i = 0; i < 28 ; i++)
+	{
+		sendSignal(Signals::controlErrorPacket);
+		delay(40);
+	}
+	
+	setReceivedPowerMessage();
+	 
+	delay(QiDelays::t_offset); 
+	sendSignal(Signals::receivedPowerPacket); 
+	delay(40); 
+	
 
-		// This if else claus is for changing the power level (0.5W to 1W)
+	// This if else claus is for changing the power level (0.5W to 1W)
+	
+	while(checkPing()&&checkOnSwitch())
+	{
+		//bool current_power = oneOrHalfWatt(); 
+		int index = 0; 
+		bool current_power = true; //ÄNDRA till kommentaren ovan
 		if(current_power)
 		{
 		//if want to recieve one watt
 		//Change the value of the message
 		//
-			while(calculatePower() < 1)
+			while((0.9 > calculatePower()) && (index != 28))
 			{	
-				Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('0', '0', '0', '0', '1', '0', '0','0')); 
+				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0', '0', '0', '0', '1', '0', '0','0')); 
 				sendSignal(Signals::controlErrorPacket);  
+				index++;
+				delay(40); 
 			} 
 
 		}
@@ -206,37 +258,21 @@ void powerTransfer()
 		//if want to recieve half watt
 		//Change the value of the message
 		// Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
-			while(calculatePower() < 1)
+			while((calculatePower() < 0.5)&&index != 28)
 			{
-				delay(QiDelays::t_error); 
-				Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
+				
+				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
 				sendSignal(Signals::controlErrorPacket);  
+				index++; 
+				delay(40);
 			}   
 		}
 		//The values below are preliminary and have to be changed in order 
-		double powerValues [8]; 
-		for(int i = 0; i < 8; i)
-		{
-			powerValues[i] = calculatePower();
-			delayMicroseconds(900); 
-		}
-
-		double averagePower = 0;  
-		for(int i = 0; i < 10; i)
-		{
-			averagePower += powerValues[i]; 
-		}
-
-		averagePower = averagePower/8; 
-		int powerReceived = (averagePower/128) * (1/2); 
-		intToBinary(powerReceived);
-		Signals::receivedPowerPacket.setMessageIndex(0, ByteGenerator(binaryCharArray)); 
+		setReceivedPowerMessage(); 
 		delay(QiDelays::t_offset); 
 		sendSignal(Signals::receivedPowerPacket); 
-		bool after_power =  oneOrHalfWatt(); 
-
-
-		
+		delay(40);
+	}
           
 }
 
@@ -253,20 +289,23 @@ void setup()
 	Serial.begin(9600); 
 }
 
+
 void loop() 
 {   
 // put your main code here, to run repeatedly:
 //BEGIN selection phase
+	
   
 	if(checkPing() && checkOnSwitch())
 	{
-	//Begin ping phase  
+	//Begin ping phase 
+		
 		pingPhase();
 	//END ping phase  
 
 	
 	
-		if(checkPing() && checkOnSwitch())
+		if(checkOnSwitch())
 		{
 			//BEGIN ID & Config phase 
 			idConfigPhase();
@@ -276,12 +315,13 @@ void loop()
 			if(checkPing() && checkOnSwitch())
 			{
 				//END power transfer phase
-				while(checkPing() && checkOnSwitch())
-				{
-					powerTransfer();
-				}
+				
+				
+				powerTransfer();
+				
 				if(!checkOnSwitch())
 				{
+					Serial.println("End on switch");
 					while(checkPing())
 					{
 						Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','1'));
@@ -291,6 +331,7 @@ void loop()
 				}
 				else
 				{
+					Serial.println("End on unknown");
 					while(checkPing())
 					Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','0'));
 					sendSignal(Signals::endPowerTransfer);
