@@ -115,7 +115,7 @@ double calculateVoltage()
 
 double calculatePower()
 {
-	const double valueShunt = 0.5;
+	const double valueShunt = 1;
 	double voltage = calculateVoltage();
 	double current = voltage / valueShunt;
 	double power = pow(voltage, 2) / valueShunt;
@@ -135,14 +135,14 @@ void setReceivedPowerMessage()
 	
 	
 
-	double averagePower = 0;  
-	for(int i = 0; i < 10; i++)
+	double powerReceived = 0;  
+	for(int i = 0; i < 8; i++)
 	{
-		averagePower += powerValues[i]; 
+		powerReceived += powerValues[i]; 
 	}
-	averagePower = averagePower/8; 
-	int powerReceived = (averagePower/128) * (1/2); 
-	intToBinary(powerReceived);
+	powerReceived = powerReceived/8; 
+	int receivedPowerValue = (receivedPowerValue*128);
+	intToBinary(receivedPowerValue);
 	Signals::receivedPowerPacket.setMessageIndex(0, ByteGenerator(binaryCharArray)); 
 	
 }
@@ -236,17 +236,31 @@ void powerTransfer()
 	
 	while(checkPing()&&checkOnSwitch())
 	{
-		//bool current_power = oneOrHalfWatt(); 
+		bool current_power = oneOrHalfWatt(); 
 		int index = 0; 
-		bool current_power = true; //ÄNDRA till kommentaren ovan
+		float currentOneWatt = 1/5; 
+		float currentHalfWatt = 1/10; 
+		int controlErrorValue = 0; 
+		float desiredCurrent = ((current_power)?currentOneWatt:currentHalfWatt);
+		
 		if(current_power)
 		{
 		//if want to recieve one watt
 		//Change the value of the message
-		//
+		//1/5 amp för 1 for one watt
+		//1/10 amp för 0.5 watt 
+		//t-d = t-a(1+c/128)
+		//t-d = t-a + t-a(c/128)
+		//t-d - t-a = t-a(c/128)
+		//128(t-d/t-a - 1) = c
+		
+		intToBinary(controlErrorValue); 
 			while((0.9 > calculatePower()) && (index != 28))
 			{	
-				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0', '0', '0', '0', '1', '0', '0','0')); 
+				float presentCurrent = calculateVoltage(); // divided by 1 because it is the value of shunt (not shown here)
+				int controlErrorValue = 128*((desiredCurrent/presentCurrent) - 1);
+				intToBinary(controlErrorValue); 
+				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator(binaryCharArray)); 
 				sendSignal(Signals::controlErrorPacket);  
 				index++;
 				delay(40); 
@@ -260,8 +274,9 @@ void powerTransfer()
 		// Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
 			while((calculatePower() < 0.5)&&index != 28)
 			{
-				
-				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
+				float presentCurrent = calculateVoltage(); // divided by 1 because it is the value of shunt (not shown here)
+				int controlErrorValue = 128*((desiredCurrent/presentCurrent) - 1);
+				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator(binaryCharArray)); 
 				sendSignal(Signals::controlErrorPacket);  
 				index++; 
 				delay(40);
@@ -272,6 +287,7 @@ void powerTransfer()
 		delay(QiDelays::t_offset); 
 		sendSignal(Signals::receivedPowerPacket); 
 		delay(40);
+		current_power = oneOrHalfWatt();
 	}
           
 }
