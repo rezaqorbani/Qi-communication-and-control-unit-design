@@ -22,6 +22,8 @@ namespace Pins
     const int rectifiedVoltagePin = A1; 
     const int onOffSwitchPin = 3; 
     const int powerLevelSwitch = 4;
+	const int outputConnect = 5; //When HIGH, Output connect
+	const int loadLed = 6; // If HIGH = 1W if LOW=0.5W
     const int shuntPin1 = A2;
     const int shuntPin2 = A3;
 };
@@ -73,11 +75,14 @@ void sendSignal(SignalGenerator signal)
 bool checkPing() // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
 { 
   
-	float lowerLimitVoltage = 0.1;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
+	float lowerLimitVoltage = 2;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
 	//int sensorValue = 0;
 
 	int sensorValue = analogRead(Pins::rectifiedVoltagePin); 
 	float voltage = sensorValue * (5.0 / 1024.0);
+	//if(voltage>=lowerLimitVoltage){
+		//Serial.println(voltage);
+	//}
 	
 	pingVoltage = voltage; 
 	return (voltage >= lowerLimitVoltage);
@@ -86,9 +91,11 @@ bool checkPing() // vet inte riktigt hur den ska implementeras eller vart den sk
 
 bool checkOnSwitch()
 {
+	
 	bool isOn = digitalRead(Pins::onOffSwitchPin);
-	//return isOn;
-	return true; //ÄNDRA sätt dedär kommentaren ovan
+	//Serial.println(isOn);
+	return isOn; //ÄNDRA sätt dedär kommentaren ovan
+	
 }
 
 //conver int to binary
@@ -101,7 +108,7 @@ void intToBinary(int n)
 
 bool oneOrHalfWatt()
 {
-	return (digitalRead(Pins::powerLevelSwitch)); //Vet inte om det här stämmer, är HIGH=TRUE här eller?
+	return (digitalRead(Pins::powerLevelSwitch)); 
 }
 
 double calculateVoltage()
@@ -128,7 +135,7 @@ void setReceivedPowerMessage()
 	double powerValues [8]; 
 	for(int i = 0; i < 8; i++)
 	{
-		Serial.println(i);
+		//Serial.println(i);
 		powerValues[i] = calculatePower();
 		delayMicroseconds(900); 
 	}
@@ -150,9 +157,9 @@ void setReceivedPowerMessage()
 void pingPhase()
 {
 	delay(QiDelays::t_wake); 
-	if(digitalRead(Pins::onOffSwitchPin)) //ÄNDRA sätt ett !
+	if(digitalRead(Pins::onOffSwitchPin)==0) //ÄNDRA sätt ett !
 	{
-		
+		Serial.println("end power");
 		Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','1'));
 		sendSignal(Signals::endPowerTransfer);
 		return; 
@@ -161,12 +168,15 @@ void pingPhase()
 	else{
 		
 		double maxValue = 5.0; 
+		
 
 		// int sensorValue = analogRead(Pins::rectifiedVoltagePin);
 		// double voltage = analogRead(Pins::rectifiedVoltagePin)*5/1024; 
 
 
 		int signalStrengthValue = (pingVoltage/maxValue)*256;
+		//Serial.println(pingVoltage);
+		
 
 		if(signalStrengthValue >256)
 		{
@@ -175,13 +185,14 @@ void pingPhase()
 		intToBinary(255);
 		Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(binaryCharArray));
 		sendSignal(Signals::signalStrengthPacket); 
+		//Serial.println("fuck");
 		delay(7);
 	}
 }
 
 void idConfigPhase()
 {
-	delay(2);
+	delay(20);
 
 	//Not completed
 	Signals::identificationPacket.setMessageIndex(0, ByteGenerator('0','0','0','1','0','0','1','0'));//Major/Minor version
@@ -213,8 +224,7 @@ void powerTransfer()
 	
 	delay(90); 
 	//bool current_power = oneOrHalfWatt(); //if true 1 watt, else 0.5 watt
-	
-	
+	digitalWrite(Pins::outputConnect, HIGH);	
 	Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0', '0', '0', '0', '1', '0', '0','0')); 
 	sendSignal(Signals::controlErrorPacket);  
 	delay(40); 
@@ -236,15 +246,16 @@ void powerTransfer()
 	
 	while(checkPing()&&checkOnSwitch())
 	{
-		//bool current_power = oneOrHalfWatt(); 
+		bool current_power = oneOrHalfWatt(); 
 		int index = 0; 
-		bool current_power = true; //ÄNDRA till kommentaren ovan
+		//bool current_power = true; //ÄNDRA till kommentaren ovan
 		if(current_power)
 		{
+			digitalWrite(Pins::loadLed,HIGH);
 		//if want to recieve one watt
 		//Change the value of the message
 		//
-			while((0.9 > calculatePower()) && (index != 28))
+			while((index != 28))
 			{	
 				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0', '0', '0', '0', '1', '0', '0','0')); 
 				sendSignal(Signals::controlErrorPacket);  
@@ -255,10 +266,11 @@ void powerTransfer()
 		}
 		else if (!current_power)
 		{
+			digitalWrite(Pins::loadLed,LOW);
 		//if want to recieve half watt
 		//Change the value of the message
 		// Signals::signalStrengthPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
-			while((calculatePower() < 0.5)&&index != 28)
+			while((index != 28))
 			{
 				
 				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1', '1', '0', '0', '0', '0', '0','0')); 
@@ -284,9 +296,14 @@ void setup()
 	pinMode(Pins::onOffSwitchPin,INPUT);
 	pinMode(Pins::powerLevelSwitch, INPUT);
 	pinMode(Pins::rectifiedVoltagePin, INPUT);
+	pinMode(Pins::outputConnect, OUTPUT);
+	pinMode(Pins::loadLed, OUTPUT);
 	pinMode(Pins::shuntPin1, INPUT);
 	pinMode(Pins::shuntPin2, INPUT); 
 	Serial.begin(9600); 
+	digitalWrite(Pins::outputConnect,LOW);
+	digitalWrite(Pins::loadLed,digitalRead(Pins::powerLevelSwitch));//Ändra
+
 }
 
 
@@ -295,11 +312,12 @@ void loop()
 // put your main code here, to run repeatedly:
 //BEGIN selection phase
 	
-  
+	digitalWrite(Pins::outputConnect, LOW); //Disconnect the output
 	if(checkPing() && checkOnSwitch())
 	{
 	//Begin ping phase 
 		
+			
 		pingPhase();
 	//END ping phase  
 
@@ -308,20 +326,21 @@ void loop()
 		if(checkOnSwitch())
 		{
 			//BEGIN ID & Config phase 
+		
 			idConfigPhase();
 			//END ID & Config phase
 
 
 			if(checkPing() && checkOnSwitch())
 			{
-				//END power transfer phase
+				//BEGIN power transfer phase
 				
 				
 				powerTransfer();
 				
 				if(!checkOnSwitch())
 				{
-					Serial.println("End on switch");
+					//Serial.println("End on switch");
 					while(checkPing())
 					{
 						Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','1'));
@@ -331,11 +350,13 @@ void loop()
 				}
 				else
 				{
-					Serial.println("End on unknown");
-					while(checkPing())
+					//Serial.println("End on unknown");
+					while(checkPing()){
 					Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','0'));
 					sendSignal(Signals::endPowerTransfer);
+					Serial.println("signal sent");
 					return; 
+					}
 				}
 				//BEGIN power transfer phase
 			}
