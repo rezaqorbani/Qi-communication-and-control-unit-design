@@ -75,14 +75,16 @@ void sendSignal(SignalGenerator signal)
 bool checkPing() // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
 { 
   
-	float lowerLimitVoltage = 2;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
+	float lowerLimitVoltage = 4.5;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
 	//int sensorValue = 0;
 
 	int sensorValue = analogRead(Pins::rectifiedVoltagePin); 
 	float voltage = sensorValue * (5.0 / 1024.0);
-	//if(voltage>=lowerLimitVoltage){
-		//Serial.println(voltage);
-	//}
+	
+	if(voltage>=lowerLimitVoltage){
+		Serial.println(voltage);
+	}
+	
 	
 	pingVoltage = voltage; 
 	return (voltage >= lowerLimitVoltage);
@@ -157,6 +159,7 @@ void setReceivedPowerMessage()
 void pingPhase()
 {
 	delay(QiDelays::t_wake); 
+
 	if(digitalRead(Pins::onOffSwitchPin)==0) //ÄNDRA sätt ett !
 	{
 		Serial.println("end power");
@@ -175,7 +178,6 @@ void pingPhase()
 
 
 		int signalStrengthValue = (pingVoltage/maxValue)*256;
-		//Serial.println(pingVoltage);
 		
 
 		if(signalStrengthValue >256)
@@ -192,7 +194,7 @@ void pingPhase()
 
 void idConfigPhase()
 {
-	delay(20);
+	delay(2);
 
 	//Not completed
 	Signals::identificationPacket.setMessageIndex(0, ByteGenerator('0','0','0','1','0','0','1','0'));//Major/Minor version
