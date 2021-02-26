@@ -19,7 +19,7 @@ namespace QiDelays
 namespace Pins
 {
     const int modComPin = 2; 
-    const int rectifiedVoltagePin = A1; 
+    const int rectifiedVoltagePin = A4; 
     const int onOffSwitchPin = 3; 
     const int powerLevelSwitch = 4;
 	const int outputConnect = 5; //When HIGH, Output connect
@@ -75,27 +75,29 @@ void sendSignal(SignalGenerator signal)
 bool checkPing() // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
 { 
   
-	float lowerLimitVoltage = 4.5;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
+	float lowerLimitVoltage = 0.5;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
 	//int sensorValue = 0;
 
 	int sensorValue = analogRead(Pins::rectifiedVoltagePin); 
 	float voltage = sensorValue * (5.0 / 1024.0);
 	
+	/*
 	if(voltage>=lowerLimitVoltage){
 		Serial.println(voltage);
 	}
+	*/
+	
 	
 	
 	pingVoltage = voltage; 
 	return (voltage >= lowerLimitVoltage);
-   
+   //return false;
 }
 
 bool checkOnSwitch()
 {
 	
 	bool isOn = digitalRead(Pins::onOffSwitchPin);
-	//Serial.println(isOn);
 	return isOn; //ÄNDRA sätt dedär kommentaren ovan
 	
 }
@@ -174,7 +176,6 @@ void setReceivedPowerMessage()
 	double powerValues [8]; 
 	for(int i = 0; i < 8; i++)
 	{
-		//Serial.println(i);
 		powerValues[i] = calculatePower();
 		delayMicroseconds(900); 
 	}
@@ -207,7 +208,7 @@ void pingPhase()
 
 	else{
 		
-		double maxValue = 5.0; 
+		double maxValue = 4.0; 
 		
 
 		// int sensorValue = analogRead(Pins::rectifiedVoltagePin);
@@ -221,10 +222,11 @@ void pingPhase()
 		{
 			signalStrengthValue = 255;
 		}
-		intToBinary(255);
+		//intToBinary(255);
+		intToBinary(signalStrengthValue);
+		Serial.println(signalStrengthValue);
 		Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(binaryCharArray));
 		sendSignal(Signals::signalStrengthPacket); 
-		//Serial.println("fuck");
 		delay(7);
 	}
 }
@@ -262,6 +264,7 @@ void powerTransfer()
 {
 	
 	delay(90); 
+	digitalWrite(Pins::outputConnect,HIGH);
 	
 	// This if else claus is for changing the power level (0.5W to 1W)
 	
@@ -271,7 +274,7 @@ void powerTransfer()
 		int index = 0; 
 		float currentOneWatt = 1/5; 
 		float currentHalfWatt = 1/10; 
-		int controlErrorValue = 0; 
+		//int controlErrorValue = 0; 
 		float desiredCurrent = ((current_power)?currentOneWatt:currentHalfWatt);
 		
 		//if want to recieve one watt
@@ -283,12 +286,15 @@ void powerTransfer()
 		//t-d - t-a = t-a(c/128)
 		//128(t-d/t-a - 1) = c
 		
-		intToTwosComplement(controlErrorValue); 
-		while(index <= 28)
+		 
+		while(checkPing() && index <= 28)
 		{	
 			float presentCurrent = calculateVoltage(); // divided by 1 because it is the value of shunt (not shown here)
-			int controlErrorValue = 128*((desiredCurrent/presentCurrent) - 1);				
+			//Serial.println(presentCurrent);
+			int controlErrorValue = 128*((desiredCurrent/presentCurrent) - 1);	
+			intToTwosComplement(controlErrorValue);			
 			Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator(binaryCharArray)); 
+			//Signals::controlErrorPacket.setMessageIndex(0, ByteGenerator('0','1','1','1','1','1','1','1'));
 			sendSignal(Signals::controlErrorPacket);  
 			index++;
 			delay(40); 
@@ -296,11 +302,14 @@ void powerTransfer()
 		
 		
 		//The values below are preliminary and have to be changed in order 
+		if(checkPing()){
 		setReceivedPowerMessage(); 
-		delay(QiDelays::t_offset); 
+		delay(QiDelays::t_offset);
+		//Signals::receivedPowerPacket.setMessageIndex(0, ByteGenerator('1','1','1','1','1','1','1','1')); 
 		sendSignal(Signals::receivedPowerPacket); 
 		delay(40);
 		current_power = oneOrHalfWatt();
+		}
 	}
           
 }
@@ -357,7 +366,6 @@ void loop()
 				
 				if(!checkOnSwitch())
 				{
-					//Serial.println("End on switch");
 					while(checkPing())
 					{
 						Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','1'));
@@ -367,11 +375,10 @@ void loop()
 				}
 				else
 				{
-					//Serial.println("End on unknown");
 					while(checkPing()){
 					Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','0'));
 					sendSignal(Signals::endPowerTransfer);
-					Serial.println("signal sent");
+					//Serial.println("signal sent");
 					return; 
 					}
 				}
