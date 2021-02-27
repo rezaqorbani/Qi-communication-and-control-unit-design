@@ -75,19 +75,19 @@ void sendSignal(SignalGenerator signal)
 bool checkPing() // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
 { 
   
-	float lowerLimitVoltage = 0.5;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
+	float lowerLimitVoltage = 1.7;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
 	//int sensorValue = 0;
 
-	int sensorValue = analogRead(Pins::rectifiedVoltagePin); 
-	float voltage = sensorValue * (5.0 / 1024.0);
+	double voltage = checkRectifiedAverage();//analogRead(Pins::rectifiedVoltagePin); 
+	//Serial.println(voltage);
+	//float voltage = sensorValue * (5.0 / 1024.0);
+	//Serial.println(voltage);
 	
 	/*
 	if(voltage>=lowerLimitVoltage){
 		Serial.println(voltage);
 	}
 	*/
-	
-	
 	
 	pingVoltage = voltage; 
 	return (voltage >= lowerLimitVoltage);
@@ -157,8 +157,16 @@ bool oneOrHalfWatt()
 
 double calculateVoltage()
 {
-	double inputValue = analogRead(Pins::shuntPin1) - analogRead(Pins::shuntPin2);
+	double totalInput1 = 0;//analogRead(Pins::shuntPin1);
+	double totalInput2 = 0;//analogRead(Pins::shuntPin2);
 	
+	for(int i = 0; i < 10; i++){
+		totalInput1 = totalInput1 + analogRead(Pins::shuntPin1);
+		totalInput2 = totalInput2 + analogRead(Pins::shuntPin2); 
+	}
+	//double inputValue = analogRead(Pins::shuntPin1) - analogRead(Pins::shuntPin2);
+	//Serial.println(input1);
+	double inputValue = totalInput1/10 - totalInput2/10;
 	double voltage = inputValue * 5.0 / 1024.0;
 
 	return voltage; 
@@ -166,17 +174,27 @@ double calculateVoltage()
 
 double calculatePower()
 {
+	//Serial.println("got");
 	const double valueShunt = 1.0;
-	double voltage = calculateVoltage();
-	double power = (voltage*voltage) / valueShunt;
+	double shuntCurrent = calculateVoltage();
+	//Serial.println(shuntCurrent);
+	double loadVoltage = 3*checkRectifiedAverage();
+	double power = shuntCurrent*loadVoltage;
+	//double power = loadVoltage*loadVoltage/31;
+	Serial.println(power);
 	return power;
 }
 
-void checkRectified()
+double checkRectifiedAverage()
 {
-	int sensorValue = analogRead(Pins::rectifiedVoltagePin); 
-	double voltage = sensorValue * (5.0 / 1024.0);
-	Serial.println(voltage);
+	double totalVoltage = 0.0;
+	for(int i = 0; i < 10; i++){
+		totalVoltage = totalVoltage + analogRead(Pins::rectifiedVoltagePin); 
+	}
+	
+	double voltage = totalVoltage/10.0 * (5.0 / 1024.0);
+	return voltage;
+	//Serial.println(voltage);
 }
 void setReceivedPowerMessage()
 {
@@ -279,6 +297,7 @@ void powerTransfer()
 	
 	delay(90); 
 	digitalWrite(Pins::outputConnect,HIGH);
+	//Serial.println("output on");
 	
 	// This if else claus is for changing the power level (0.5W to 1W)
 	
@@ -287,6 +306,7 @@ void powerTransfer()
 		
 		int index = 0; 
 		double powerLevel; 
+		int controlErrorValue;
 
 		
 		if(oneOrHalfWatt())
@@ -299,19 +319,38 @@ void powerTransfer()
 		}
 	
 		
-		 
+		 //Serial.println("pwr");
 		while(checkPing() && index <= 28)
 		{	
+			double currentPower = calculatePower();
+			double powerDifference = powerLevel - currentPower; 
+			//Serial.println(powerDifference);
+			
+			if(currentPower<1.05*powerLevel&& powerDifference>0.95*powerLevel){
+				//controlErrorValue = 0;
+				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','0','0','0','0','0','0','0')); 
 
-			int controlErrorValue = (100 * (powerLevel - calculatePower() )); 
-			controlErrorValue = controlErrorValue % 128; 
-			intToTwosComplement(controlErrorValue);	
-			Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator(binaryCharArray)); 
+			}
+			else if(powerDifference<0){//Vi har för mycket
+				//controlErrorValue = -128;
+				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','0','0','0','0','0','0','0')); 
+
+			}
+			else if(powerDifference>0){//Vi har för lite
+				//controlErrorValue = 127;
+			Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','1','1','1','1','1','1','1')); 
+			
+			}
+			
+			
+			//controlErrorValue = controlErrorValue % 128; 
+			//intToTwosComplement(controlErrorValue);	
+			//Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator(binaryCharArray)); 
 			//Signals::controlErrorPacket.setMessageIndex(0, ByteGenerator('0','1','1','1','1','1','1','1'));
 			sendSignal(Signals::controlErrorPacket);  
 			index++;
-			checkRectified();
-			delay(35); 
+			//checkRectified();
+			delay(40); 
 		} 
 		
 		
@@ -351,6 +390,7 @@ void loop()
 //BEGIN selection phase
 	
 	digitalWrite(Pins::outputConnect, LOW); //Disconnect the output
+	//Serial.println("hej");
 	if(checkPing() && checkOnSwitch())
 	{
 	//Begin ping phase 
