@@ -113,35 +113,38 @@ void intToBinary(int n)
 
 void intToTwosComplement(int number)
 {
-	  int index = 7; 
-	  while(number!=0) {binaryCharArray[index] = (number%2==0 ?'0':'1'); index--; number/=2;}
-
-	  int i; 
-    int n = 8; 
-    for (i = n-1 ; i >= 0 ; i--) 
-        if (binaryCharArray[i] == '1') 
-            break; 
-  
-    // If there exists no '1' concatenate 1 at the 
-    // starting of string 
-    if (i == -1) 
-    {
-       binaryCharArray[7] = '1'; 
-        return; 
-    }
-     
-  
-    // Continue traversal after the position of 
-    // first '1' 
-    for (int k = i-1 ; k >= 0; k--) 
-    { 
-        //Just flip the values 
-        if (binaryCharArray[k] == '1') 
-            binaryCharArray[k] = '0'; 
-        else
-            binaryCharArray[k] = '1'; 
-    } 
-  
+	int copy = number; 
+	int index = 7; 
+	while(number!=0) {binaryCharArray[index] = (number%2==0 ?'0':'1'); index--; number/=2;}
+	if(copy < 0)
+	{
+		int i; 
+		int n = 8; 
+		for (i = n-1 ; i >= 0 ; i--) 
+			if (binaryCharArray[i] == '1') 
+				break; 
+	
+		// If there exists no '1' concatenate 1 at the 
+		// starting of string 
+		if (i == -1) 
+		{
+		binaryCharArray[7] = '1'; 
+			return; 
+		}
+		
+	
+		// Continue traversal after the position of 
+		// first '1' 
+		for (int k = i-1 ; k >= 0; k--) 
+		{ 
+			//Just flip the values 
+			if (binaryCharArray[k] == '1') 
+				binaryCharArray[k] = '0'; 
+			else
+				binaryCharArray[k] = '1'; 
+		} 
+	}	
+	
     // return the modified string 
     return; 
 } 
@@ -155,7 +158,7 @@ bool oneOrHalfWatt()
 double calculateVoltage()
 {
 	double inputValue = analogRead(Pins::shuntPin1) - analogRead(Pins::shuntPin2);
-
+	
 	double voltage = inputValue * 5.0 / 1024.0;
 
 	return voltage; 
@@ -163,16 +166,29 @@ double calculateVoltage()
 
 double calculatePower()
 {
-	const double valueShunt = 1;
+	const double valueShunt = 1.0;
 	double voltage = calculateVoltage();
-	double current = voltage / valueShunt;
-	double power = pow(voltage, 2) / valueShunt;
+	double power = (voltage*voltage) / valueShunt;
 	return power;
 }
 
+void checkRectified()
+{
+	int sensorValue = analogRead(Pins::rectifiedVoltagePin); 
+	double voltage = sensorValue * (5.0 / 1024.0);
+	Serial.println(voltage);
+}
 void setReceivedPowerMessage()
 {
-	
+	//if want to recieve one watt
+	//Change the value of the message
+	//1/5 amp för 1 for one watt
+	//1/10 amp för 0.5 watt 
+	//t-d = t-a(1+c/128)
+	//t-d = t-a + t-a(c/128)
+	//t-d - t-a = t-a(c/128)
+	//128(t-d/t-a - 1) = c
+
 	double powerValues [8]; 
 	for(int i = 0; i < 8; i++)
 	{
@@ -180,27 +196,25 @@ void setReceivedPowerMessage()
 		delayMicroseconds(900); 
 	}
 	
-	
-
 	double powerReceived = 0;  
 	for(int i = 0; i < 8; i++)
 	{
 		powerReceived += powerValues[i]; 
 	}
 	powerReceived = powerReceived/8; 
-	int receivedPowerValue = (receivedPowerValue*128);
+	int receivedPowerValue = (powerReceived*128);
 	intToBinary(receivedPowerValue);
 	Signals::receivedPowerPacket.setMessageIndex(0, ByteGenerator(binaryCharArray)); 
 	
 }
+
 
 void pingPhase()
 {
 	delay(QiDelays::t_wake); 
 
 	if(digitalRead(Pins::onOffSwitchPin)==0) //ÄNDRA sätt ett !
-	{
-		Serial.println("end power");
+	{	
 		Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','1'));
 		sendSignal(Signals::endPowerTransfer);
 		return; 
@@ -208,7 +222,7 @@ void pingPhase()
 
 	else{
 		
-		double maxValue = 4.0; 
+		double maxValue = 2.0; 
 		
 
 		// int sensorValue = analogRead(Pins::rectifiedVoltagePin);
@@ -224,7 +238,7 @@ void pingPhase()
 		}
 		//intToBinary(255);
 		intToBinary(signalStrengthValue);
-		Serial.println(signalStrengthValue);
+		
 		Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(binaryCharArray));
 		sendSignal(Signals::signalStrengthPacket); 
 		delay(7);
@@ -270,34 +284,34 @@ void powerTransfer()
 	
 	while(checkPing()&&checkOnSwitch())
 	{
-		bool current_power = oneOrHalfWatt(); 
-		int index = 0; 
-		float currentOneWatt = 1/5; 
-		float currentHalfWatt = 1/10; 
-		//int controlErrorValue = 0; 
-		float desiredCurrent = ((current_power)?currentOneWatt:currentHalfWatt);
 		
-		//if want to recieve one watt
-		//Change the value of the message
-		//1/5 amp för 1 for one watt
-		//1/10 amp för 0.5 watt 
-		//t-d = t-a(1+c/128)
-		//t-d = t-a + t-a(c/128)
-		//t-d - t-a = t-a(c/128)
-		//128(t-d/t-a - 1) = c
+		int index = 0; 
+		double powerLevel; 
+
+		
+		if(oneOrHalfWatt())
+		{
+			powerLevel = 1.0;
+		}
+		else
+		{
+			powerLevel = 0.5; 
+		}
+	
 		
 		 
 		while(checkPing() && index <= 28)
 		{	
-			float presentCurrent = calculateVoltage(); // divided by 1 because it is the value of shunt (not shown here)
-			//Serial.println(presentCurrent);
-			int controlErrorValue = 128*((desiredCurrent/presentCurrent) - 1);	
-			intToTwosComplement(controlErrorValue);			
+
+			int controlErrorValue = (100 * (powerLevel - calculatePower() )); 
+			controlErrorValue = controlErrorValue % 128; 
+			intToTwosComplement(controlErrorValue);	
 			Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator(binaryCharArray)); 
 			//Signals::controlErrorPacket.setMessageIndex(0, ByteGenerator('0','1','1','1','1','1','1','1'));
 			sendSignal(Signals::controlErrorPacket);  
 			index++;
-			delay(40); 
+			checkRectified();
+			delay(35); 
 		} 
 		
 		
@@ -305,10 +319,8 @@ void powerTransfer()
 		if(checkPing()){
 		setReceivedPowerMessage(); 
 		delay(QiDelays::t_offset);
-		//Signals::receivedPowerPacket.setMessageIndex(0, ByteGenerator('1','1','1','1','1','1','1','1')); 
 		sendSignal(Signals::receivedPowerPacket); 
 		delay(40);
-		current_power = oneOrHalfWatt();
 		}
 	}
           
