@@ -332,13 +332,41 @@ void powerTransfer()
 
 			}
 			else if(powerDifference<0){//Vi har för mycket
-				//controlErrorValue = -128;
-				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','0','0','0','0','0','0','0')); 
+				if(currentPower<1.1*powerLevel){
+					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','1','1','0','0','0','0','0'));
+				}
+				else if(currentPower<1.3*powerLevel){
+					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','1','0','0','0','0','0','0'));
+
+				}
+				else if(currentPower<1.5*powerLevel){
+					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','0','1','0','0','0','0','0'));
+
+
+				}
+				else{
+					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','0','0','0','0','0','0','0'));
+				}
+				 
 
 			}
 			else if(powerDifference>0){//Vi har för lite
-				//controlErrorValue = 127;
-			Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','1','1','1','1','1','1','1')); 
+				if(currentPower>0.9*powerLevel){
+					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','0','1','0','0','0','0','0'));
+
+				}
+				else if(currentPower>0.7*powerLevel){
+					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','1','0','0','0','0','0','0'));
+
+				}
+				else if(currentPower>0.5*powerLevel){
+					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','1','1','0','0','0','0','0'));
+
+				}
+				else{
+					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','1','1','1','1','1','1','1'));
+				}
+			 
 			
 			}
 			
