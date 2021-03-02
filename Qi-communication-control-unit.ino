@@ -74,24 +74,21 @@ void sendSignal(SignalGenerator signal)
 
 bool checkPing() // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
 { 
-  
 	float lowerLimitVoltage = 1.7;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
-	//int sensorValue = 0;
-
 	double voltage = checkRectifiedAverage();//analogRead(Pins::rectifiedVoltagePin); 
-	//Serial.println(voltage);
-	//float voltage = sensorValue * (5.0 / 1024.0);
-	//Serial.println(voltage);
-	
-	/*
-	if(voltage>=lowerLimitVoltage){
-		Serial.println(voltage);
-	}
-	*/
-	
 	pingVoltage = voltage; 
+	//Serial.println(voltage);
+	if(voltage<lowerLimitVoltage){
+		
+	//	Serial.println("failed");
+	}
 	return (voltage >= lowerLimitVoltage);
    //return false;
+}
+bool checkRectified(){
+	float lowerLimitVoltage = 0.5;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
+	double voltage = checkRectifiedAverage();//analogRead(Pins::rectifiedVoltagePin); 
+	return (voltage >= lowerLimitVoltage);
 }
 
 bool checkOnSwitch()
@@ -159,14 +156,13 @@ double calculateVoltage()
 {
 	double totalInput1 = 0;//analogRead(Pins::shuntPin1);
 	double totalInput2 = 0;//analogRead(Pins::shuntPin2);
-	
-	for(int i = 0; i < 10; i++){
+	int repetitions = 20;
+	for(int i = 0; i < repetitions; i++){
 		totalInput1 = totalInput1 + analogRead(Pins::shuntPin1);
 		totalInput2 = totalInput2 + analogRead(Pins::shuntPin2); 
 	}
 	//double inputValue = analogRead(Pins::shuntPin1) - analogRead(Pins::shuntPin2);
-	//Serial.println(input1);
-	double inputValue = totalInput1/10 - totalInput2/10;
+	double inputValue = totalInput1/repetitions - totalInput2/repetitions;
 	double voltage = inputValue * 5.0 / 1024.0;
 
 	return voltage; 
@@ -174,14 +170,15 @@ double calculateVoltage()
 
 double calculatePower()
 {
-	//Serial.println("got");
-	const double valueShunt = 1.0;
-	double shuntCurrent = calculateVoltage();
-	//Serial.println(shuntCurrent);
+	const double valueShunt = 1.2;
+	double shuntVoltage = calculateVoltage();
+	//Serial.println(shuntVoltage);
 	double loadVoltage = 3*checkRectifiedAverage();
-	double power = shuntCurrent*loadVoltage;
-	//double power = loadVoltage*loadVoltage/31;
+	double power = shuntVoltage/valueShunt*loadVoltage;
+	Serial.println(loadVoltage);
+	Serial.println(shuntVoltage);
 	Serial.println(power);
+	Serial.println();
 	return power;
 }
 
@@ -194,7 +191,6 @@ double checkRectifiedAverage()
 	
 	double voltage = totalVoltage/10.0 * (5.0 / 1024.0);
 	return voltage;
-	//Serial.println(voltage);
 }
 void setReceivedPowerMessage()
 {
@@ -254,8 +250,8 @@ void pingPhase()
 		{
 			signalStrengthValue = 255;
 		}
-		//intToBinary(255);
-		intToBinary(signalStrengthValue);
+		intToBinary(255);
+		//intToBinary(signalStrengthValue);
 		
 		Signals::signalStrengthPacket.setMessageIndex(0, ByteGenerator(binaryCharArray));
 		sendSignal(Signals::signalStrengthPacket); 
@@ -295,20 +291,20 @@ void idConfigPhase()
 void powerTransfer()
 {
 	
-	delay(90); 
+	 
 	digitalWrite(Pins::outputConnect,HIGH);
-	//Serial.println("output on");
+	delay(90);
+	Serial.println("output connected");
 	
 	// This if else claus is for changing the power level (0.5W to 1W)
 	
-	while(checkPing()&&checkOnSwitch())
+	while(checkRectified()&&checkOnSwitch())
+	
 	{
-		
+		//Serial.println("pow");
 		int index = 0; 
 		double powerLevel; 
-		int controlErrorValue;
-
-		
+		//int controlErrorValue;
 		if(oneOrHalfWatt())
 		{
 			powerLevel = 1.0;
@@ -317,21 +313,20 @@ void powerTransfer()
 		{
 			powerLevel = 0.5; 
 		}
-	
-		
-		 //Serial.println("pwr");
-		while(checkPing() && index <= 28)
+		while(checkRectified() && index <= 28)
 		{	
 			double currentPower = calculatePower();
 			double powerDifference = powerLevel - currentPower; 
 			//Serial.println(powerDifference);
-			
-			if(currentPower<1.05*powerLevel&& powerDifference>0.95*powerLevel){
-				//controlErrorValue = 0;
+
+		
+			if((currentPower<1.05*powerLevel)&& (powerDifference>0.95*powerLevel)){
 				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','0','0','0','0','0','0','0')); 
 
+				Serial.println("no change");
 			}
 			else if(powerDifference<0){//Vi har för mycket
+				Serial.println("vi har för mycket");
 				if(currentPower<1.1*powerLevel){
 					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','1','1','0','0','0','0','0'));
 				}
@@ -341,19 +336,19 @@ void powerTransfer()
 				}
 				else if(currentPower<1.5*powerLevel){
 					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','0','1','0','0','0','0','0'));
-
-
 				}
 				else{
-					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','0','0','0','0','0','0','0'));
+			
+				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','0','0','0','0','0','0','0'));
 				}
 				 
 
 			}
 			else if(powerDifference>0){//Vi har för lite
+				Serial.println("för lite");
 				if(currentPower>0.9*powerLevel){
 					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','0','1','0','0','0','0','0'));
-
+					
 				}
 				else if(currentPower>0.7*powerLevel){
 					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','1','0','0','0','0','0','0'));
@@ -364,17 +359,14 @@ void powerTransfer()
 
 				}
 				else{
-					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','1','1','1','1','1','1','1'));
+				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','1','1','1','1','1','1','1'));
 				}
 			 
 			
 			}
 			
 			
-			//controlErrorValue = controlErrorValue % 128; 
-			//intToTwosComplement(controlErrorValue);	
-			//Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator(binaryCharArray)); 
-			//Signals::controlErrorPacket.setMessageIndex(0, ByteGenerator('0','1','1','1','1','1','1','1'));
+			Signals::controlErrorPacket.setMessageIndex(0, ByteGenerator('0','1','1','1','1','1','1','1'));
 			sendSignal(Signals::controlErrorPacket);  
 			index++;
 			//checkRectified();
@@ -383,7 +375,7 @@ void powerTransfer()
 		
 		
 		//The values below are preliminary and have to be changed in order 
-		if(checkPing()){
+		if(checkRectified()){
 		setReceivedPowerMessage(); 
 		delay(QiDelays::t_offset);
 		sendSignal(Signals::receivedPowerPacket); 
@@ -418,7 +410,6 @@ void loop()
 //BEGIN selection phase
 	
 	digitalWrite(Pins::outputConnect, LOW); //Disconnect the output
-	//Serial.println("hej");
 	if(checkPing() && checkOnSwitch())
 	{
 	//Begin ping phase 
@@ -437,7 +428,7 @@ void loop()
 			//END ID & Config phase
 
 
-			if(checkPing() && checkOnSwitch())
+			if(checkRectified() && checkOnSwitch())
 			{
 				//BEGIN power transfer phase
 				
@@ -446,7 +437,7 @@ void loop()
 				
 				if(!checkOnSwitch())
 				{
-					while(checkPing())
+					while(checkRectified())
 					{
 						Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','1'));
 						sendSignal(Signals::endPowerTransfer);
@@ -455,10 +446,9 @@ void loop()
 				}
 				else
 				{
-					while(checkPing()){
+					while(checkRectified()){
 					Signals::endPowerTransfer.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','0'));
 					sendSignal(Signals::endPowerTransfer);
-					//Serial.println("signal sent");
 					return; 
 					}
 				}
