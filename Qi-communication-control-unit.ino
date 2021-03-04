@@ -23,9 +23,11 @@ namespace Pins
     const int onOffSwitchPin = 3; 
     const int powerLevelSwitch = 4;
 	const int outputConnect = 5; //When HIGH, Output connect
-	const int loadLed = 6; // If HIGH = 1W if LOW=0.5W
+	const int actualLoadConnect = 6; //When HIGH actual load and not dummy load is connected
+	const int loadLed1 = 7; 
+	const int loadLed2 = 8;
     const int shuntPin1 = A2;
-    const int shuntPin2 = A3;
+    const int shuntPin2 = A5;
 };
 
 namespace Signals
@@ -74,7 +76,7 @@ void sendSignal(SignalGenerator signal)
 
 bool checkPing() // vet inte riktigt hur den ska implementeras eller vart den ska komma ifrån. kanske en global variabel?
 { 
-	float lowerLimitVoltage = 1.7;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
+	float lowerLimitVoltage = 1.4;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
 	double voltage = checkRectifiedAverage();//analogRead(Pins::rectifiedVoltagePin); 
 	pingVoltage = voltage; 
 	//Serial.println(voltage);
@@ -88,6 +90,8 @@ bool checkPing() // vet inte riktigt hur den ska implementeras eller vart den sk
 bool checkRectified(){
 	float lowerLimitVoltage = 0.5;//defines the lower limit of our recitified current of the power signal and which level is considered on/off
 	double voltage = checkRectifiedAverage();//analogRead(Pins::rectifiedVoltagePin); 
+	//Serial.println(voltage);
+	//Serial.println();
 	return (voltage >= lowerLimitVoltage);
 }
 
@@ -156,7 +160,7 @@ double calculateVoltage()
 {
 	double totalInput1 = 0;//analogRead(Pins::shuntPin1);
 	double totalInput2 = 0;//analogRead(Pins::shuntPin2);
-	int repetitions = 20;
+	int repetitions = 10;
 	for(int i = 0; i < repetitions; i++){
 		totalInput1 = totalInput1 + analogRead(Pins::shuntPin1);
 		totalInput2 = totalInput2 + analogRead(Pins::shuntPin2); 
@@ -171,14 +175,15 @@ double calculateVoltage()
 double calculatePower()
 {
 	const double valueShunt = 1.2;
-	double shuntVoltage = calculateVoltage();
+	//double shuntVoltage = calculateVoltage();
 	//Serial.println(shuntVoltage);
 	double loadVoltage = 3*checkRectifiedAverage();
-	double power = shuntVoltage/valueShunt*loadVoltage;
-	Serial.println(loadVoltage);
-	Serial.println(shuntVoltage);
-	Serial.println(power);
-	Serial.println();
+	//double power = shuntVoltage/valueShunt*loadVoltage;
+	double power = loadVoltage*loadVoltage/84;
+	//Serial.println(loadVoltage);
+	//Serial.println(shuntVoltage);
+	//Serial.println(power);
+	//Serial.println();
 	return power;
 }
 
@@ -190,6 +195,7 @@ double checkRectifiedAverage()
 	}
 	
 	double voltage = totalVoltage/10.0 * (5.0 / 1024.0);
+	Serial.println(3*voltage);
 	return voltage;
 }
 void setReceivedPowerMessage()
@@ -278,7 +284,7 @@ void idConfigPhase()
 	delay(QiDelays::t_silent);
 
 		
-	Signals::configurationPacket.setMessageIndex(0, ByteGenerator('0','0','0','0','0','1','0','0'));
+	Signals::configurationPacket.setMessageIndex(0, ByteGenerator('0','0','0','0','0','0','0','1'));
 	Signals::configurationPacket.setMessageIndex(1, ByteGenerator('0','0','0','0','0','0','0','0'));//Reserved
 	Signals::configurationPacket.setMessageIndex(2, ByteGenerator('0','0','0','0','0','0','0','0'));
 	Signals::configurationPacket.setMessageIndex(3, ByteGenerator('0','0','0','1','0','0','0','1'));//window size 8 samt window offset 4
@@ -291,10 +297,14 @@ void idConfigPhase()
 void powerTransfer()
 {
 	
-	 
+	bool loadDisconnected = true; 
 	digitalWrite(Pins::outputConnect,HIGH);
+	//digitalWrite(Pins::outputConnect,LOW);
+	
+
+
 	delay(90);
-	Serial.println("output connected");
+	//Serial.println("output connected");
 	
 	// This if else claus is for changing the power level (0.5W to 1W)
 	
@@ -305,21 +315,37 @@ void powerTransfer()
 		int index = 0; 
 		double powerLevel; 
 		//int controlErrorValue;
-		if(oneOrHalfWatt())
+		if(digitalRead(Pins::powerLevelSwitch)){
+			powerLevel=1;
+			digitalWrite(Pins::loadLed1,HIGH);//Ändra
+			digitalWrite(Pins::loadLed2,HIGH);
+		}
+		else{
+			powerLevel = 0.5;
+			digitalWrite(Pins::loadLed1,LOW);
+			digitalWrite(Pins::loadLed2,HIGH);
+		}
+		if(3*checkRectifiedAverage()>5.5 && loadDisconnected)
+		{
+			digitalWrite(Pins::actualLoadConnect,HIGH);
+			loadDisconnected = false;
+		}
+		/*if(oneOrHalfWatt())
 		{
 			powerLevel = 1.0;
+			digitalWrite(Pins::loadLed1=LOW)
 		}
 		else
 		{
 			powerLevel = 0.5; 
 		}
+		*/
 		while(checkRectified() && index <= 28)
 		{	
 			double currentPower = calculatePower();
 			double powerDifference = powerLevel - currentPower; 
 			//Serial.println(powerDifference);
-
-		
+			/*
 			if((currentPower<1.05*powerLevel)&& (powerDifference>0.95*powerLevel)){
 				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','0','0','0','0','0','0','0')); 
 
@@ -364,7 +390,7 @@ void powerTransfer()
 			 
 			
 			}
-			
+			*/
 			
 			Signals::controlErrorPacket.setMessageIndex(0, ByteGenerator('0','1','1','1','1','1','1','1'));
 			sendSignal(Signals::controlErrorPacket);  
@@ -394,12 +420,22 @@ void setup()
 	pinMode(Pins::powerLevelSwitch, INPUT);
 	pinMode(Pins::rectifiedVoltagePin, INPUT);
 	pinMode(Pins::outputConnect, OUTPUT);
-	pinMode(Pins::loadLed, OUTPUT);
+	pinMode(Pins::actualLoadConnect, OUTPUT);
+	pinMode(Pins::loadLed1, OUTPUT);
+	pinMode(Pins::loadLed2, OUTPUT);
 	pinMode(Pins::shuntPin1, INPUT);
 	pinMode(Pins::shuntPin2, INPUT); 
 	Serial.begin(9600); 
 	digitalWrite(Pins::outputConnect,LOW);
-	digitalWrite(Pins::loadLed,digitalRead(Pins::powerLevelSwitch));//Ändra
+	//digitalWrite(Pins::outputConnect,HIGH);
+	if(digitalRead(Pins::powerLevelSwitch)){
+		digitalWrite(Pins::loadLed1,HIGH);//Ändra
+		digitalWrite(Pins::loadLed2,HIGH);
+	}
+	else{
+		digitalWrite(Pins::loadLed1,LOW);
+		digitalWrite(Pins::loadLed2,HIGH);
+	}
 
 }
 
@@ -409,7 +445,11 @@ void loop()
 // put your main code here, to run repeatedly:
 //BEGIN selection phase
 	
+	digitalWrite(Pins::actualLoadConnect, LOW);
 	digitalWrite(Pins::outputConnect, LOW); //Disconnect the output
+	
+	//digitalWrite(Pins::outputConnect,HIGH);
+
 	if(checkPing() && checkOnSwitch())
 	{
 	//Begin ping phase 
