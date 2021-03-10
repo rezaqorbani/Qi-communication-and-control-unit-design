@@ -175,15 +175,9 @@ double calculateVoltage()
 double calculatePower()
 {
 	const double valueShunt = 1.2;
-	//double shuntVoltage = calculateVoltage();
-	//Serial.println(shuntVoltage);
 	double loadVoltage = 3*checkRectifiedAverage();
-	//double power = shuntVoltage/valueShunt*loadVoltage;
 	double power = loadVoltage*loadVoltage/84;
-	//Serial.println(loadVoltage);
-	//Serial.println(shuntVoltage);
-	//Serial.println(power);
-	//Serial.println();
+
 	return power;
 }
 
@@ -330,72 +324,19 @@ void powerTransfer()
 			digitalWrite(Pins::actualLoadConnect,HIGH);
 			loadDisconnected = false;
 		}
-		/*if(oneOrHalfWatt())
-		{
-			powerLevel = 1.0;
-			digitalWrite(Pins::loadLed1=LOW)
-		}
-		else
-		{
-			powerLevel = 0.5; 
-		}
-		*/
 		while(checkRectified() && index <= 28)
 		{	
-			double currentPower = calculatePower();
-			double powerDifference = powerLevel - currentPower; 
-			//Serial.println(powerDifference);
-			/*
-			if((currentPower<1.05*powerLevel)&& (powerDifference>0.95*powerLevel)){
-				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','0','0','0','0','0','0','0')); 
-
-				Serial.println("no change");
-			}
-			else if(powerDifference<0){//Vi har för mycket
-				Serial.println("vi har för mycket");
-				if(currentPower<1.1*powerLevel){
-					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','1','1','0','0','0','0','0'));
-				}
-				else if(currentPower<1.3*powerLevel){
-					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','1','0','0','0','0','0','0'));
-
-				}
-				else if(currentPower<1.5*powerLevel){
-					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','0','1','0','0','0','0','0'));
-				}
-				else{
-			
-				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('1','0','0','0','0','0','0','0'));
-				}
-				 
+			//double currentPower = calculatePower();
+			//double powerDifference = powerLevel - currentPower;
+			if(){
 
 			}
-			else if(powerDifference>0){//Vi har för lite
-				Serial.println("för lite");
-				if(currentPower>0.9*powerLevel){
-					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','0','1','0','0','0','0','0'));
-					
-				}
-				else if(currentPower>0.7*powerLevel){
-					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','1','0','0','0','0','0','0'));
+			else{
 
-				}
-				else if(currentPower>0.5*powerLevel){
-					Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','1','1','0','0','0','0','0'));
-
-				}
-				else{
-				Signals::controlErrorPacket.setMessageIndex(0,ByteGenerator('0','1','1','1','1','1','1','1'));
-				}
-			 
-			
 			}
-			*/
-			
 			Signals::controlErrorPacket.setMessageIndex(0, ByteGenerator('0','1','1','1','1','1','1','1'));
 			sendSignal(Signals::controlErrorPacket);  
 			index++;
-			//checkRectified();
 			delay(40); 
 		} 
 		
