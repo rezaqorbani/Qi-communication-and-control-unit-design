@@ -40,7 +40,7 @@ namespace Signals
 
 
 float pingVoltage;
-char binaryCharArray[8] = {'0', '0','0', '0','0', '0','0', '0'}; 
+char binaryCharArray[8] = {'0', '0','0', '0','0', '0','0', '0'}; // This is a an array used for when an array of size 8 is needed to be returned, and thus modified, in a function. 
 
 
 void sendSignal(SignalGenerator signal) 
