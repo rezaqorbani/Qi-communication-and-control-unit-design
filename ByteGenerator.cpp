@@ -88,6 +88,6 @@ char ByteGenerator::get_parity()
                 number_of_ones += 1;
         }
     }
-    return (((number_of_ones % 2) == 0)? '1' : '0' ); // number_of_bits bigger than must be bigger than zero?
+    return (((number_of_ones % 2) == 0)? '1' : '0' ); // if there are even number of 1's in the byte return 1 else return 0
 }
 
