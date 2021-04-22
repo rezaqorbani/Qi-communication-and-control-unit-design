@@ -30,6 +30,8 @@ class ByteGenerator
 
     //change on bit (b7-b0) at a certain index
     void set_one_bit(int index, char value);
+  
+    //get the parity bit (1 or 0)
     char get_parity();
   private:
     char m_bit_array[11];
