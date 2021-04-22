@@ -12,7 +12,7 @@ Created by Reza Qorbani
 class ByteGenerator
 {
   public:
-    //ByteGenerator(){};
+    
     //Generate a byte with the given bits, MSB to LSB
     ByteGenerator(char bit_7=0 , char bit_6 =0, char bit_5=0 , char bit_4=0 , char bit_3=0 , char bit_2 =0, char bit_1=0 , char bit_0=0 );
 
@@ -34,6 +34,7 @@ class ByteGenerator
     //get the parity bit (1 or 0)
     char get_parity();
   private:
+    //Array to all of bits in the signal
     char m_bit_array[11];
     
 };
