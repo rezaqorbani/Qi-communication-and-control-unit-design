@@ -87,7 +87,7 @@ int SignalGenerator::getSignalSize()
 
 }
 
-void SignalGenerator::m_create_header(int header) //fill in te signal with given heaefer from int to bit car array
+void SignalGenerator::m_create_header(int header) //creates a char array with '1' and '0' from an in int
 {
     int byte_size = 8;
     unsigned int mask = 1U << (byte_size-1);
@@ -137,7 +137,7 @@ void SignalGenerator::m_generate_checksum()
 
     for(int bit = 1; bit < 9; bit++)
     {
-        this->m_checksum.get_byte()[bit] = ((this->m_header_byte.get_byte()[bit] - '0') ^ (this->m_messages[0][bit] - '0')) ?'1':'0';
+        this->m_checksum.get_byte()[bit] = ((this->m_header_byte.get_byte()[bit] - '0') ^ (this->m_messages[0][bit] - '0')) ?'1':'0'; //XOR each pair of bit of adjacent fields
     }
 
     for (int index = 1; index < this->m_calculate_message_size(); index++)
