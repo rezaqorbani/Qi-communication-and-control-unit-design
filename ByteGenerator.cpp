@@ -35,7 +35,7 @@ ByteGenerator::ByteGenerator(char* init_array )
 
 char* ByteGenerator::get_byte()
 {
-  m_bit_array[9] = this->get_parity();
+  m_bit_array[9] = this->get_parity();  //set the prity bit before returning the byte
   return m_bit_array;
 }
 
