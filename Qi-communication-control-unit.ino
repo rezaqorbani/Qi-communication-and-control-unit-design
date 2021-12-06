@@ -21,10 +21,10 @@ namespace Pins
     const int rectifiedVoltagePin = A4; 
     const int onOffSwitchPin = 3; 
     const int powerLevelSwitch = 4;
-	const int outputConnect = 5; //When HIGH, Output connect
-	const int actualLoadConnect = 6; //When HIGH actual load and not dummy load is connected
-	const int loadLed1 = 7; 
-	const int loadLed2 = 8;
+    const int outputConnect = 5; //When HIGH, Output connect
+    const int actualLoadConnect = 6; //When HIGH actual load and not dummy load is connected
+    const int loadLed1 = 7; 
+    const int loadLed2 = 8;
 };
 
 namespace Signals
